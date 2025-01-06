@@ -56,7 +56,7 @@ async def serve_root():
 async def serve_frontend(full_path: str):
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404)
-    return FileResponse(f"static/{full_path}")
+    return FileResponse("static/index.html")
 
 
 if __name__ == "__main__":
