@@ -11,6 +11,10 @@ export default defineConfig({
       "/api": "http://localhost:8000",
     }
   },
+  build: {
+    outDir: '../backend/static',
+    emptyOutDir: true
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

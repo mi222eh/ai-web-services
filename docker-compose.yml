@@ -1,0 +1,19 @@
+services:
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongo:27017/
+    depends_on:
+      - mongo
+
+volumes:
+  mongodb_data:
