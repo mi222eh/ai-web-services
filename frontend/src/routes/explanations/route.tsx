@@ -50,6 +50,7 @@ export const Route = createFileRoute('/explanations')({
   },
   loader: async (args) => {
     let list: Explanation[] = await fetch('/api/explanations').then((res) => res.json())
+    if (!list) list = []
     if (args.deps.query) {
       const query = args.deps.query.toLowerCase()
       // Fuzzy search with Levenshtein distance
