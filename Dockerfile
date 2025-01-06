@@ -10,8 +10,9 @@ RUN pnpm build
 # Build backend
 FROM python:3.11-slim
 WORKDIR /app
-COPY backend/requirements.txt .
-RUN pip install -r requirements.txt
+COPY backend/pyproject.toml .
+RUN pip install --upgrade pip && \
+    pip install .
 COPY backend/ .
 COPY --from=frontend-builder /frontend/dist static/
 EXPOSE 8000
