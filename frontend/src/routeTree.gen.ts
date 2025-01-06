@@ -12,10 +12,8 @@
 
 import { Route as rootRoute } from './routes/__root'
 import { Route as AboutImport } from './routes/about'
-import { Route as SynonymsRouteImport } from './routes/synonyms/route'
 import { Route as ExplanationsRouteImport } from './routes/explanations/route'
 import { Route as IndexImport } from './routes/index'
-import { Route as SynonymsSynonymIdRouteImport } from './routes/synonyms/$synonymId/route'
 import { Route as ExplanationsExplanationIdRouteImport } from './routes/explanations/$explanationId/route'
 
 // Create/Update Routes
@@ -23,12 +21,6 @@ import { Route as ExplanationsExplanationIdRouteImport } from './routes/explanat
 const AboutRoute = AboutImport.update({
   id: '/about',
   path: '/about',
-  getParentRoute: () => rootRoute,
-} as any)
-
-const SynonymsRouteRoute = SynonymsRouteImport.update({
-  id: '/synonyms',
-  path: '/synonyms',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -42,12 +34,6 @@ const IndexRoute = IndexImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRoute,
-} as any)
-
-const SynonymsSynonymIdRouteRoute = SynonymsSynonymIdRouteImport.update({
-  id: '/$synonymId',
-  path: '/$synonymId',
-  getParentRoute: () => SynonymsRouteRoute,
 } as any)
 
 const ExplanationsExplanationIdRouteRoute =
@@ -75,13 +61,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExplanationsRouteImport
       parentRoute: typeof rootRoute
     }
-    '/synonyms': {
-      id: '/synonyms'
-      path: '/synonyms'
-      fullPath: '/synonyms'
-      preLoaderRoute: typeof SynonymsRouteImport
-      parentRoute: typeof rootRoute
-    }
     '/about': {
       id: '/about'
       path: '/about'
@@ -95,13 +74,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/explanations/$explanationId'
       preLoaderRoute: typeof ExplanationsExplanationIdRouteImport
       parentRoute: typeof ExplanationsRouteImport
-    }
-    '/synonyms/$synonymId': {
-      id: '/synonyms/$synonymId'
-      path: '/$synonymId'
-      fullPath: '/synonyms/$synonymId'
-      preLoaderRoute: typeof SynonymsSynonymIdRouteImport
-      parentRoute: typeof SynonymsRouteImport
     }
   }
 }
@@ -119,85 +91,51 @@ const ExplanationsRouteRouteChildren: ExplanationsRouteRouteChildren = {
 const ExplanationsRouteRouteWithChildren =
   ExplanationsRouteRoute._addFileChildren(ExplanationsRouteRouteChildren)
 
-interface SynonymsRouteRouteChildren {
-  SynonymsSynonymIdRouteRoute: typeof SynonymsSynonymIdRouteRoute
-}
-
-const SynonymsRouteRouteChildren: SynonymsRouteRouteChildren = {
-  SynonymsSynonymIdRouteRoute: SynonymsSynonymIdRouteRoute,
-}
-
-const SynonymsRouteRouteWithChildren = SynonymsRouteRoute._addFileChildren(
-  SynonymsRouteRouteChildren,
-)
-
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/explanations': typeof ExplanationsRouteRouteWithChildren
-  '/synonyms': typeof SynonymsRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/explanations/$explanationId': typeof ExplanationsExplanationIdRouteRoute
-  '/synonyms/$synonymId': typeof SynonymsSynonymIdRouteRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/explanations': typeof ExplanationsRouteRouteWithChildren
-  '/synonyms': typeof SynonymsRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/explanations/$explanationId': typeof ExplanationsExplanationIdRouteRoute
-  '/synonyms/$synonymId': typeof SynonymsSynonymIdRouteRoute
 }
 
 export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/explanations': typeof ExplanationsRouteRouteWithChildren
-  '/synonyms': typeof SynonymsRouteRouteWithChildren
   '/about': typeof AboutRoute
   '/explanations/$explanationId': typeof ExplanationsExplanationIdRouteRoute
-  '/synonyms/$synonymId': typeof SynonymsSynonymIdRouteRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths:
-    | '/'
-    | '/explanations'
-    | '/synonyms'
-    | '/about'
-    | '/explanations/$explanationId'
-    | '/synonyms/$synonymId'
+  fullPaths: '/' | '/explanations' | '/about' | '/explanations/$explanationId'
   fileRoutesByTo: FileRoutesByTo
-  to:
-    | '/'
-    | '/explanations'
-    | '/synonyms'
-    | '/about'
-    | '/explanations/$explanationId'
-    | '/synonyms/$synonymId'
+  to: '/' | '/explanations' | '/about' | '/explanations/$explanationId'
   id:
     | '__root__'
     | '/'
     | '/explanations'
-    | '/synonyms'
     | '/about'
     | '/explanations/$explanationId'
-    | '/synonyms/$synonymId'
   fileRoutesById: FileRoutesById
 }
 
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ExplanationsRouteRoute: typeof ExplanationsRouteRouteWithChildren
-  SynonymsRouteRoute: typeof SynonymsRouteRouteWithChildren
   AboutRoute: typeof AboutRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ExplanationsRouteRoute: ExplanationsRouteRouteWithChildren,
-  SynonymsRouteRoute: SynonymsRouteRouteWithChildren,
   AboutRoute: AboutRoute,
 }
 
@@ -213,7 +151,6 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/explanations",
-        "/synonyms",
         "/about"
       ]
     },
@@ -226,22 +163,12 @@ export const routeTree = rootRoute
         "/explanations/$explanationId"
       ]
     },
-    "/synonyms": {
-      "filePath": "synonyms/route.tsx",
-      "children": [
-        "/synonyms/$synonymId"
-      ]
-    },
     "/about": {
       "filePath": "about.tsx"
     },
     "/explanations/$explanationId": {
       "filePath": "explanations/$explanationId/route.tsx",
       "parent": "/explanations"
-    },
-    "/synonyms/$synonymId": {
-      "filePath": "synonyms/$synonymId/route.tsx",
-      "parent": "/synonyms"
     }
   }
 }

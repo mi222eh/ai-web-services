@@ -3,21 +3,14 @@ interface Model {
   _id: string;
 }
 
-export type SynonymEntry = {
+export type ExplanationEntry = {
   explanation: string;
   synonyms: string[];
-}
-
-export type Synonym = Model & {
-  word: string;
-  entries : SynonymEntry[];
-  created_at: Date;
-  updated_at?: Date | null;
 };
 
 export type Explanation = Model & {
   word: string;
-  explanation: string;
-  created_at: Date | null;
+  entries: ExplanationEntry[];
+  created_at: Date;
   updated_at?: Date | null;
 };

@@ -4,14 +4,14 @@ from beanie import Document
 from pydantic import BaseModel
 
 
-class SynonymEntry(BaseModel):
+class ExplanationEntry(BaseModel):
     explanation: str
     synonyms: list[str]
 
 
-class Synonym(Document):
+class Explanation(Document):
     word: str
-    entries: list[SynonymEntry]
+    entries: list[ExplanationEntry]
     created_at: datetime = datetime.now()
     updated_at: Optional[datetime] = None
 

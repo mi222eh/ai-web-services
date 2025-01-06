@@ -9,8 +9,8 @@ import { TanStackRouterDevtools } from "@tanstack/router-devtools";
 
 const links = [
   linkOptions({
-    to: "/synonyms",
-    label: "Synonymer",
+    to: "/explanations",
+    label: "Förklaringar",
   }),
   // linkOptions({
   //   to: "/explanations",
