@@ -8,7 +8,7 @@ COPY frontend/ ./
 RUN pnpm build
 
 # Build backend
-FROM python:3.11-slim
+FROM python:3.12-slim
 WORKDIR /app
 COPY backend/pyproject.toml .
 RUN pip install --upgrade pip && \
