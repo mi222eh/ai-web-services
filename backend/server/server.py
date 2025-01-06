@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from beanie import init_beanie
-from server.models import Synonym, Explanation
+from server.models import Synonym
 from server.routes import router
 
 
@@ -11,7 +11,7 @@ from server.routes import router
 async def lifespan(app: FastAPI):
     # Initialize MongoDB connection on startup
     client = AsyncIOMotorClient("mongodb://localhost:27017")
-    await init_beanie(database=client.worddb, document_models=[Synonym, Explanation])
+    await init_beanie(database=client.worddb, document_models=[Synonym])
     yield
     # Clean up the MongoDB connection on shutdown
     client.close()

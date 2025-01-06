@@ -4,7 +4,7 @@ from datetime import datetime
 import requests
 
 from server.services.synonym_service.ai import create_synonym_ai
-from ..models import CreateSynonymDTO, Synonym
+from ..models import CreateSynonymDTO, Synonym, SynonymEntry
 from fastapi import APIRouter
 
 router = APIRouter()
@@ -14,15 +14,19 @@ router = APIRouter()
 async def create_synonym(synonym: CreateSynonymDTO) -> Synonym:
     result = create_synonym_ai(synonym.word)
 
-    response = Synonym(
-        word=synonym.word,
-        synonyms=result.synonyms,
-        explanation=result.explanation,
-        created_at=datetime.now(),
+    existing = await Synonym.find_one(Synonym.word == result)
+    if not existing:
+        existing = Synonym(word=synonym.word, entries=[])
+        existing.created_at = datetime.now()
+    else:
+        existing.updated_at = datetime.now()
+
+    existing.entries.append(
+        SynonymEntry(synonyms=result.synonyms, explanation=result.explanation)
     )
 
-    await response.create()
-    return response
+    await existing.save()
+    return existing
 
 
 @router.get("")
@@ -44,8 +48,12 @@ async def update_synonym(id: PydanticObjectId, updated_synonym: Synonym) -> Syno
     if not synonym:
         raise HTTPException(status_code=404, detail="Synonym not found")
 
+    update = create_synonym_ai(updated_synonym.word)
+
+    updated_synonym.synonyms = update.synonyms
+    updated_synonym.explanation = update.explanation
     updated_synonym.updated_at = datetime.now()
-    await synonym.set(updated_synonym.model_dump(exclude={"id", "created_at"}))
+    await updated_synonym.save()
     return await Synonym.get(id)
 
 

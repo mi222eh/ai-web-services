@@ -17,6 +17,3 @@ dist/
 !.vscode/extensions.json
 .idea
 
-# Python
-*.pyc
-*.pyo
