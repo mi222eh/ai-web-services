@@ -40,6 +40,9 @@ app.add_middleware(
 # Serve static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Include the router in the app
+app.include_router(router, prefix="/api")
+
 
 # Catch all route to serve index.html
 @app.get("/{full_path:path}")
@@ -48,9 +51,6 @@ async def serve_frontend(full_path: str):
         raise HTTPException(status_code=404)
     return FileResponse(f"static/{full_path or 'index.html'}")
 
-
-# Include the router in the app
-app.include_router(router, prefix="/api")
 
 if __name__ == "__main__":
     import uvicorn
