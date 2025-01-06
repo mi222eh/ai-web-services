@@ -8,7 +8,6 @@ import { Loader2 } from 'lucide-react'
 import { useState } from 'react'
 import { z } from 'zod'
 
-// Function to calculate Levenshtein distance for fuzzy matching
 const levenshteinDistance = (str1: string, str2: string): number => {
   const track = Array(str2.length + 1)
     .fill(null)
@@ -55,16 +54,27 @@ export const Route = createFileRoute('/explanations')({
       const query = args.deps.query.toLowerCase()
       // Fuzzy search with Levenshtein distance
       list = list
-        .filter((s) => {
-          const distance = levenshteinDistance(s.word.toLowerCase(), query)
-          // Allow matches within a certain distance threshold (adjust as needed)
-          const threshold = Math.max(2, Math.floor(query.length * 0.3))
-          return distance <= threshold
+        .filter((explanation) => {
+          const word = explanation.word.toLowerCase()
+          const content = explanation.entries[0]?.explanation.toLowerCase() || ''
+
+          // Check for exact substring matches first
+          if (word.includes(query) || content.includes(query)) {
+            return true
+          }
+
+          // Fall back to fuzzy matching
+          const wordDistance = levenshteinDistance(query, word)
+          const contentDistance = levenshteinDistance(query, content)
+
+          // Allow matches within reasonable distance threshold 
+          const threshold = Math.max(2, Math.floor(query.length / 3))
+          return wordDistance <= threshold || contentDistance <= threshold
         })
         .sort((a, b) => {
-          // Sort by Levenshtein distance to show best matches first
-          const distA = levenshteinDistance(a.word.toLowerCase(), query)
-          const distB = levenshteinDistance(b.word.toLowerCase(), query)
+          // Sort by word relevance
+          const distA = levenshteinDistance(query, a.word.toLowerCase())
+          const distB = levenshteinDistance(query, b.word.toLowerCase())
           return distA - distB
         })
     }
@@ -110,7 +120,6 @@ function RouteComponent() {
               onChange={onSearch}
               className="border rounded-full px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-pink-500 w-64"
             />
-            {/* Only show the "Add" text if there's a search query */}
             <button
               onClick={onOpenAdd}
               className="text-pink-500 text-sm hover:text-pink-700 hover:underline cursor-pointer animate-in fade-in duration-200"

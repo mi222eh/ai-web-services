@@ -43,19 +43,18 @@ async def get_synonym(id: PydanticObjectId) -> Explanation:
 
 
 @router.put("/{id}")
-async def update_synonym(
-    id: PydanticObjectId, updated_synonym: Explanation
-) -> Explanation:
+async def update_synonym(id: PydanticObjectId) -> Explanation:
     synonym = await Explanation.get(id)
+
     if not synonym:
         raise HTTPException(status_code=404, detail="Synonym not found")
 
-    update = create_synonym_ai(updated_synonym.word)
+    update = create_synonym_ai(synonym.word, synonym.entries)
 
-    updated_synonym.synonyms = update.synonyms
-    updated_synonym.explanation = update.explanation
-    updated_synonym.updated_at = datetime.now()
-    await updated_synonym.save()
+    synonym.synonyms = update.synonyms
+    synonym.explanation = update.explanation
+    synonym.updated_at = datetime.now()
+    await synonym.save()
     return await Explanation.get(id)
 
 

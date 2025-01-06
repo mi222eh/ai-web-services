@@ -1,7 +1,10 @@
 import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Explanation } from '@/types/models'
 import { createFileRoute } from '@tanstack/react-router'
+import { Loader2 } from 'lucide-react'
+import { useState } from 'react'
 
 export const Route = createFileRoute('/explanations/$explanationId')({
   component: RouteComponent,
@@ -14,16 +17,28 @@ export const Route = createFileRoute('/explanations/$explanationId')({
 
 function RouteComponent() {
   const explanation = Route.useLoaderData()
+  const [isLoading, setIsLoading] = useState(false)
 
-  const entry = explanation.entries[0]
+  const entry = explanation.entries[explanation.entries.length - 1]
+
+  const onRetry = async () => {
+    setIsLoading(true)
+    try {
+      await fetch('/api/explanations/' + explanation._id, {
+        method: 'PUT',
+      })
+      Route.router?.invalidate()
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 w-80">
       <CardHeader>
         <CardTitle>{explanation.word}</CardTitle>
       </CardHeader>
       <CardContent>
-
         <div className='flex flex-col'>
           <span>Synonymer:</span>
           <div className='flex flex-wrap'>
@@ -35,6 +50,12 @@ function RouteComponent() {
           <span dangerouslySetInnerHTML={{ __html: entry.explanation }}></span>
         </div>
       </CardContent>
+      <CardFooter>
+        <Button onClick={onRetry} disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          Uppdatera
+        </Button>
+      </CardFooter>
     </Card>
   )
 }

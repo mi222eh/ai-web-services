@@ -6,7 +6,7 @@ from pydantic import BaseModel
 
 class ExplanationEntry(BaseModel):
     explanation: str
-    synonyms: list[str]
+    synonyms: Optional[list[str]]
 
 
 class Explanation(Document):
