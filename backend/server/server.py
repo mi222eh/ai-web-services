@@ -46,7 +46,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 async def serve_frontend(full_path: str):
     if full_path.startswith("api/"):
         raise HTTPException(status_code=404)
-    return FileResponse("static/index.html")
+    return FileResponse(f"static/{full_path or 'index.html'}")
 
 
 # Include the router in the app
