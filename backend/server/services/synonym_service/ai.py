@@ -17,12 +17,11 @@ class CreateSynonymSchema(BaseModel):
     synonyms: list[str]
     explanation: str
 
+
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "localhost")
 logger.info(f"Connecting to Ollama at {OLLAMA_HOST}")
 
 client = ollama.Client(host=OLLAMA_HOST)
-
-
 
 
 def search_synonym(synonym: str) -> str:

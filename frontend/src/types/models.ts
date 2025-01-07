@@ -14,3 +14,7 @@ export type Explanation = Model & {
   created_at: Date;
   updated_at?: Date | null;
 };
+
+export type CreateSynonymDTO = {
+  word: string;
+};

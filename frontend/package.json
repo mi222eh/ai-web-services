@@ -54,6 +54,7 @@
     "@tanstack/react-router": "^1.92.3",
     "@tanstack/router-devtools": "^1.92.3",
     "@tanstack/zod-adapter": "^1.92.3",
+    "axios": "^1.7.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "cmdk": "1.0.0",
