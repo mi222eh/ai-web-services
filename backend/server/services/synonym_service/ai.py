@@ -20,7 +20,7 @@ class CreateSynonymSchema(BaseModel):
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "localhost")
 logger.info(f"Connecting to Ollama at {OLLAMA_HOST}")
 
-client = ollama.Client(host=os.environ.get("OLLAMA_HOST", "localhost"))
+client = ollama.Client(host=OLLAMA_HOST)
 
 
 
@@ -52,7 +52,7 @@ def create_synonym_ai(synonym: str, previous_entries: list[ExplanationEntry] = N
         html_response.raise_for_status()
     except requests.RequestException as e:
         logger.error(f"Failed to fetch synonym data: {e}")
-        return None
+        html_response = ""
 
     messages = [
         {
@@ -95,7 +95,7 @@ def create_synonym_ai(synonym: str, previous_entries: list[ExplanationEntry] = N
         )
     except Exception as e:
         logger.error(f"Failed to get response from AI model: {e}")
-        return None
+        raise e
 
     messages.append({"role": "assistant", "content": response.message.content})
 
