@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Optional
+from typing import Optional, TypeVar, Generic
 from beanie import Document
 from pydantic import BaseModel
 
@@ -21,3 +21,13 @@ class Explanation(Document):
 
 class CreateSynonymDTO(BaseModel):
     word: str
+
+
+T = TypeVar("T")
+
+
+class PaginatedResponse(BaseModel, Generic[T]):
+    items: list[T]
+    total: int
+    skip: int
+    limit: int

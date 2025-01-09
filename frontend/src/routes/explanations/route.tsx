@@ -8,6 +8,15 @@ import { Loader2 } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { createExplanation, fetchExplanations } from "@/api/explanations";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const levenshteinDistance = (str1: string, str2: string): number => {
   const track = Array(str2.length + 1)
@@ -34,73 +43,55 @@ const levenshteinDistance = (str1: string, str2: string): number => {
 
 const searchParam = z.object({
   query: z.string().default("").catch(""),
+  page: z.number().default(1).catch(1),
+  limit: z.number().default(10).catch(10),
 });
 
 export const Route = createFileRoute("/explanations")({
   component: RouteComponent,
   validateSearch: zodValidator(searchParam),
-  loaderDeps: (opts) => ({ query: opts.search.query }),
-  beforeLoad: (ctx) => {
-    return {
-      getExplanations: async () => {
-        const response = await fetchExplanations();
-        let list: Explanation[] = response;
-        return list;
-      },
-    };
-  },
+  loaderDeps: (opts) => ({ 
+    query: opts.search.query,
+    page: opts.search.page,
+    limit: opts.search.limit,
+  }),
   loader: async (args) => {
-    let list: Explanation[] = await fetchExplanations();
-    if (!list) list = [];
-    if (args.deps.query) {
-      const query = args.deps.query.toLowerCase();
-      // Fuzzy search with Levenshtein distance
-      list = list
-        .filter((explanation) => {
-          const word = explanation.word.toLowerCase();
-          const content =
-            explanation.entries[0]?.explanation.toLowerCase() || "";
-
-          // Check for exact substring matches first
-          if (word.includes(query) || content.includes(query)) {
-            return true;
-          }
-
-          // Fall back to fuzzy matching
-          const wordDistance = levenshteinDistance(query, word);
-          const contentDistance = levenshteinDistance(query, content);
-
-          // Allow matches within reasonable distance threshold
-          const threshold = Math.max(2, Math.floor(query.length / 3));
-          return wordDistance <= threshold || contentDistance <= threshold;
-        })
-        .sort((a, b) => {
-          // Sort by word relevance
-          const distA = levenshteinDistance(query, a.word.toLowerCase());
-          const distB = levenshteinDistance(query, b.word.toLowerCase());
-          return distA - distB;
-        });
-    }
-    return list;
+    const skip = (args.deps.page - 1) * args.deps.limit;
+    const response = await fetchExplanations(skip, args.deps.limit, args.deps.query);
+    return response;
   },
 });
 
 function RouteComponent() {
-  const explanations = Route.useLoaderData();
+  const { items: explanations, total } = Route.useLoaderData();
+  const { page, limit, query } = Route.useSearch();
   const [isAddOpen, setIsAddOpen] = useState(false);
-  const searchQuery = Route.useSearch().query;
-
-  const onOpenAdd = () => setIsAddOpen(true);
   const navigate = Route.useNavigate();
+
+  const totalPages = Math.ceil(total / limit);
 
   const onSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault();
     navigate({
       search: {
         query: e.target.value.toLowerCase(),
+        page: 1, // Reset to first page on new search
+        limit,
       },
     });
   };
+
+  const onPageChange = (newPage: number) => {
+    navigate({
+      search: {
+        query,
+        page: newPage,
+        limit,
+      },
+    });
+  };
+
+  const onOpenAdd = () => setIsAddOpen(true);
 
   const onWordClick = (word: Explanation) => {
     navigate({
@@ -109,14 +100,17 @@ function RouteComponent() {
     });
   };
 
+  // Calculate how many skeleton items to show
+  const skeletonCount = Math.max(0, limit - explanations.length);
+
   return (
-    <div className="p-4">
+    <div className="p-4 flex flex-col min-h-[calc(100vh-4rem)]">
       <div className="p-2 flex gap-2 text-lg justify-center items-center">
         <Outlet />
       </div>
 
-      <div>
-        <div className="w-full justify-center justify-items-center flex-col">
+      <div className="flex-1 flex flex-col items-center">
+        <div className="w-full max-w-md flex flex-col items-center gap-4">
           <div className="flex flex-col items-center gap-2">
             <Input
               placeholder="Sök"
@@ -130,26 +124,65 @@ function RouteComponent() {
               hittar inte? lägg till!
             </button>
           </div>
-          <ul className="gap-4 flex-col justify-items-center w-fit mt-4">
+          
+          <ul className="w-full space-y-2">
             {explanations.map((explanation) => (
-              <li key={explanation._id} className="w-full pt-2">
+              <li key={explanation._id}>
                 <button
-                  className="text-pink-500 hover:text-pink-700 cursor-pointer"
+                  className="text-pink-500 hover:text-pink-700 cursor-pointer w-full text-center py-2"
                   onClick={() => onWordClick(explanation)}
                 >
                   {explanation.word}
                 </button>
               </li>
             ))}
+            {/* Skeleton items for empty spaces */}
+            {Array.from({ length: skeletonCount }).map((_, index) => (
+              <li key={`skeleton-${index}`} className="py-2 flex justify-center">
+                <Skeleton className="h-6 w-3/4 animate-pulse" />
+              </li>
+            ))}
           </ul>
         </div>
-        {isAddOpen && (
-          <AddExplanationDialog
-            isAddOpen={isAddOpen}
-            onOpenChange={(isOpen) => setIsAddOpen(isOpen)}
-          />
-        )}
+
+        <div className="mt-auto pt-4">
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  onClick={() => page > 1 ? onPageChange(page - 1) : undefined}
+                  isActive={page <= 1}
+                />
+              </PaginationItem>
+              
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+                <PaginationItem key={pageNum}>
+                  <PaginationLink
+                    onClick={() => onPageChange(pageNum)}
+                    isActive={pageNum === page}
+                  >
+                    {pageNum}
+                  </PaginationLink>
+                </PaginationItem>
+              ))}
+              
+              <PaginationItem>
+                <PaginationNext
+                  onClick={() => page < totalPages ? onPageChange(page + 1) : undefined}
+                  isActive={page >= totalPages}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
       </div>
+
+      {isAddOpen && (
+        <AddExplanationDialog
+          isAddOpen={isAddOpen}
+          onOpenChange={(isOpen) => setIsAddOpen(isOpen)}
+        />
+      )}
     </div>
   );
 }
