@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Explanation } from "@/types/models";
 import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
-import { Loader2 } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
 import { createExplanation, fetchExplanations } from "@/api/explanations";
@@ -65,8 +65,8 @@ export const Route = createFileRoute("/explanations")({
 function RouteComponent() {
   const { items: explanations, total } = Route.useLoaderData();
   const { page, limit, query } = Route.useSearch();
-  const [isAddOpen, setIsAddOpen] = useState(false);
   const navigate = Route.useNavigate();
+  const [isAdding, setIsAdding] = useState(false);
 
   const totalPages = Math.ceil(total / limit);
 
@@ -81,6 +81,53 @@ function RouteComponent() {
     });
   };
 
+  const onAdd = async () => {
+    if (isAdding || !query.trim()) return;
+    
+    const searchTerm = query.trim().toLowerCase();
+    const exists = explanations.some(exp => exp.word.toLowerCase() === searchTerm);
+    
+    if (!exists) {
+      try {
+        setIsAdding(true);
+        const data = await createExplanation({
+          word: searchTerm,
+        });
+        await navigate({
+          to: "/explanations/$explanationId",
+          params: { explanationId: data._id },
+        });
+      } catch (error) {
+        console.error('Failed to create explanation:', error);
+      } finally {
+        setIsAdding(false);
+      }
+    }
+  };
+
+  const onSearchKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+      const searchTerm = e.currentTarget.value.trim().toLowerCase();
+      
+      // Check if word exists in current results
+      const exists = explanations.some(exp => exp.word.toLowerCase() === searchTerm);
+      
+      if (!exists) {
+        try {
+          const data = await createExplanation({
+            word: searchTerm,
+          });
+          await navigate({
+            to: "/explanations/$explanationId",
+            params: { explanationId: data._id },
+          });
+        } catch (error) {
+          console.error('Failed to create explanation:', error);
+        }
+      }
+    }
+  };
+
   const onPageChange = (newPage: number) => {
     navigate({
       search: {
@@ -90,8 +137,6 @@ function RouteComponent() {
       },
     });
   };
-
-  const onOpenAdd = () => setIsAddOpen(true);
 
   const onWordClick = (word: Explanation) => {
     navigate({
@@ -110,19 +155,25 @@ function RouteComponent() {
       </div>
 
       <div className="flex-1 flex flex-col items-center">
-        <div className="w-full max-w-md flex flex-col items-center gap-4">
-          <div className="flex flex-col items-center gap-2">
-            <Input
-              placeholder="Sök"
-              onChange={onSearch}
-              className="border rounded-full px-4 py-2 text-sm shadow-sm focus:ring-2 focus:ring-pink-500 w-64"
-            />
-            <button
-              onClick={onOpenAdd}
-              className="text-pink-500 text-sm hover:text-pink-700 hover:underline cursor-pointer animate-in fade-in duration-200"
-            >
-              hittar inte? lägg till!
-            </button>
+        <div className="w-full max-w-2xl flex flex-col items-center gap-6">
+          <div className="flex flex-col items-center gap-3">
+            <div className="flex gap-2 items-center">
+              <Input
+                placeholder="Sök"
+                onChange={onSearch}
+                onKeyDown={onSearchKeyDown}
+                value={query}
+                className="border rounded-full px-6 py-3 text-base shadow-sm focus:ring-2 focus:ring-pink-500 w-80"
+              />
+              <Button 
+                size="icon"
+                disabled={!query.trim() || isAdding}
+                onClick={onAdd}
+                className="rounded-full h-12 w-12 flex items-center justify-center"
+              >
+                {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+              </Button>
+            </div>
           </div>
           
           <ul className="w-full space-y-2">
@@ -176,78 +227,6 @@ function RouteComponent() {
           </Pagination>
         </div>
       </div>
-
-      {isAddOpen && (
-        <AddExplanationDialog
-          isAddOpen={isAddOpen}
-          onOpenChange={(isOpen) => setIsAddOpen(isOpen)}
-        />
-      )}
     </div>
   );
 }
-
-interface AddExplanationDialogProps {
-  isAddOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
-}
-
-const AddExplanationDialog = (props: AddExplanationDialogProps) => {
-  const { isAddOpen, onOpenChange } = props;
-
-  const navigate = Route.useNavigate();
-  const router = useRouter();
-
-  const [explanation, setExplanation] = useState("");
-  const [isAdding, setIsAdding] = useState(false);
-
-  const onAdd = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    console.log("Is Adding:", explanation);
-    if (isAdding) return;
-    if (explanation.trim() === "") return;
-
-    try {
-      setIsAdding(true);
-      const data = await createExplanation({
-        word: explanation.trim(),
-      });
-      await router.invalidate();
-      await navigate({
-        to: "/explanations/$explanationId",
-        params: { explanationId: data._id },
-      });
-      onOpenChange(false);
-    } catch (error) {
-      // Error handling...
-    }
-  };
-
-  return (
-    <Dialog open={isAddOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogTitle>Lägg till förklaring</DialogTitle>
-        <form onSubmit={onAdd}>
-          <div className="grid grid-cols-1 gap-4">
-            <label htmlFor="word" className="block mb-2 text-sm font-medium">
-              Förklaring
-            </label>
-            <input
-              id="word"
-              name="word"
-              type="text"
-              value={explanation}
-              onChange={(e) => setExplanation(e.target.value)}
-              required
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-lg bg-gray-50 focus:outline-none focus:border-blue-500 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:focus:outline-none dark:focus:border-blue-600 dark:focus:ring-blue-600"
-            />
-            <Button disabled={!explanation || isAdding} type="submit">
-              {isAdding && <Loader2 className="animate-spin animate-in" />}
-              Lägg till
-            </Button>
-          </div>
-        </form>
-      </DialogContent>
-    </Dialog>
-  );
-};

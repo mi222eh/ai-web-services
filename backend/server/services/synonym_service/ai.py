@@ -37,7 +37,7 @@ class SearchQueriesSchema(BaseModel):
 
 
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "localhost")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "llama3.1")
+OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma2")
 logger.info(f"Connecting to Ollama at {OLLAMA_HOST} using model {OLLAMA_MODEL}")
 
 client = ollama.Client(host=OLLAMA_HOST)
@@ -119,12 +119,16 @@ def get_search_queries(synonym: str) -> list[str]:
                     ]
                 }}
                 
-                Tänk på att:
+                VIKTIGT! Följ dessa regler EXAKT:
                 - Sökfrågorna ska vara på svenska
-                - Sök efter både synonymer och betydelser
-                - Använd olika källor (synonymer.se, svenska.se, etc)
-                - Tänk på olika sätt att fråga
-                - Max 5 sökfrågor""",
+                - Sökfrågorna ska ENDAST handla om ordet '{synonym}' - inga andra ord!
+                - Varje sökfråga MÅSTE vara komplett och sluta med en punkt
+                - Använd dessa exakta format:
+                  1. "synonymer till {synonym} svenska."
+                  2. "{synonym} betydelse definition svenska."
+                  3. "vad betyder {synonym} förklaring svenska."
+                - Max 3 sökfrågor
+                - Inga förkortningar eller ofullständiga meningar""",
         },
         {
             "role": "user",
@@ -145,9 +149,9 @@ def get_search_queries(synonym: str) -> list[str]:
         logger.error(f"Failed to get search queries from AI: {e}")
         # Fallback to default queries
         return [
-            f"synonymer {synonym} svenska",
-            f"{synonym} betydelse definition svenska",
-            f"vad betyder {synonym} förklaring",
+            f"synonymer till {synonym} svenska.",
+            f"{synonym} betydelse definition svenska.",
+            f"vad betyder {synonym} förklaring svenska.",
         ]
 
 

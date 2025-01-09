@@ -39,7 +39,7 @@ function RootComponent() {
         ))}
       </div>
       <hr />
-      <div className="flex justify-center items-center p-4">
+      <div className="container mx-auto px-4 py-8">
         <Outlet />
       </div>
       <TanStackRouterDevtools position="bottom-right" />
