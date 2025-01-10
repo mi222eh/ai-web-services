@@ -1,8 +1,11 @@
 import os
 from contextlib import asynccontextmanager
+from concurrent.futures import ThreadPoolExecutor
+import asyncio
+from functools import partial
 
 from beanie import init_beanie
-from fastapi import FastAPI, HTTPException, Path
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +19,7 @@ from server.routes import router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Get MongoDB URL from environment variable or use default
-    mongodb_url = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
+    mongodb_url = os.environ.get("MONGODB_URL", "mongodb://localhost:27017")
 
     # Initialize MongoDB connection on startup
     client = AsyncIOMotorClient(mongodb_url)
@@ -28,7 +31,6 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan, docs_url="/docs/")
 
-
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -37,7 +39,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 # Serve static files from the "static" directory
 app.mount("/static", StaticFiles(directory=str(STATIC_PATH)), name="static")

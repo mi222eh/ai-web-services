@@ -1,5 +1,6 @@
 import { CreateSynonymDTO, Explanation } from '@/types/models';
 import axios from 'axios';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
 const API_URL = '/api/explanations';
 
@@ -10,7 +11,8 @@ export interface PaginatedResponse<T> {
   limit: number;
 }
 
-export const fetchExplanations = async (
+// API functions
+const fetchExplanations = async (
   skip: number = 0,
   limit: number = 10,
   query?: string
@@ -28,21 +30,68 @@ export const fetchExplanations = async (
   return response.data;
 };
 
-export const fetchExplanationById = async (id: string): Promise<Explanation> => {
+const fetchExplanationById = async (id: string): Promise<Explanation> => {
   const response = await axios.get<Explanation>(`${API_URL}/${id}`);
   return response.data;
 };
 
-export const createExplanation = async (data: CreateSynonymDTO): Promise<Explanation> => {
+const createExplanation = async (data: CreateSynonymDTO): Promise<Explanation> => {
   const response = await axios.post<Explanation>(API_URL, data);
   return response.data;
 };
 
-    export const updateExplanation = async (id: string): Promise<Explanation> => {
+const updateExplanation = async (id: string): Promise<Explanation> => {
   const response = await axios.put<Explanation>(`${API_URL}/${id}`);
   return response.data;
 };
 
-export const deleteExplanation = async (id: string): Promise<void> => {
+const deleteExplanation = async (id: string): Promise<void> => {
   await axios.delete(`${API_URL}/${id}`);
+};
+
+// React Query Hooks
+export const useExplanations = (skip: number, limit: number, query?: string) => {
+  return useQuery({
+    queryKey: ['explanations', skip, limit, query],
+    queryFn: () => fetchExplanations(skip, limit, query),
+  });
+};
+
+export const useExplanation = (id: string) => {
+  return useQuery({
+    queryKey: ['explanation', id],
+    queryFn: () => fetchExplanationById(id),
+    enabled: !!id,
+  });
+};
+
+export const useCreateExplanation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: createExplanation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['explanations'] });
+    },
+  });
+};
+
+export const useUpdateExplanation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: updateExplanation,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['explanations'] });
+      queryClient.invalidateQueries({ queryKey: ['explanation', data._id] });
+    },
+  });
+};
+
+export const useDeleteExplanation = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: deleteExplanation,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['explanations'] });
+    },
+  });
 };

@@ -1,13 +1,12 @@
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Explanation } from "@/types/models";
-import { createFileRoute, Outlet, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { Loader2, Plus } from "lucide-react";
 import { useState } from "react";
 import { z } from "zod";
-import { createExplanation, fetchExplanations } from "@/api/explanations";
+import { useExplanations, useCreateExplanation } from "@/api/explanations";
 import {
   Pagination,
   PaginationContent,
@@ -18,29 +17,6 @@ import {
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
 
-const levenshteinDistance = (str1: string, str2: string): number => {
-  const track = Array(str2.length + 1)
-    .fill(null)
-    .map(() => Array(str1.length + 1).fill(null));
-  for (let i = 0; i <= str1.length; i += 1) {
-    track[0][i] = i;
-  }
-  for (let j = 0; j <= str2.length; j += 1) {
-    track[j][0] = j;
-  }
-  for (let j = 1; j <= str2.length; j += 1) {
-    for (let i = 1; i <= str1.length; i += 1) {
-      const indicator = str1[i - 1] === str2[j - 1] ? 0 : 1;
-      track[j][i] = Math.min(
-        track[j][i - 1] + 1,
-        track[j - 1][i] + 1,
-        track[j - 1][i - 1] + indicator
-      );
-    }
-  }
-  return track[str2.length][str1.length];
-};
-
 const searchParam = z.object({
   query: z.string().default("").catch(""),
   page: z.number().default(1).catch(1),
@@ -50,24 +26,18 @@ const searchParam = z.object({
 export const Route = createFileRoute("/explanations")({
   component: RouteComponent,
   validateSearch: zodValidator(searchParam),
-  loaderDeps: (opts) => ({ 
-    query: opts.search.query,
-    page: opts.search.page,
-    limit: opts.search.limit,
-  }),
-  loader: async (args) => {
-    const skip = (args.deps.page - 1) * args.deps.limit;
-    const response = await fetchExplanations(skip, args.deps.limit, args.deps.query);
-    return response;
-  },
 });
 
 function RouteComponent() {
-  const { items: explanations, total } = Route.useLoaderData();
   const { page, limit, query } = Route.useSearch();
   const navigate = Route.useNavigate();
-  const [isAdding, setIsAdding] = useState(false);
+  const skip = (page - 1) * limit;
 
+  const { data, isLoading } = useExplanations(skip, limit, query);
+  const createMutation = useCreateExplanation();
+
+  const explanations = data?.items ?? [];
+  const total = data?.total ?? 0;
   const totalPages = Math.ceil(total / limit);
 
   const onSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -82,15 +52,14 @@ function RouteComponent() {
   };
 
   const onAdd = async () => {
-    if (isAdding || !query.trim()) return;
+    if (createMutation.isPending || !query.trim()) return;
     
     const searchTerm = query.trim().toLowerCase();
     const exists = explanations.some(exp => exp.word.toLowerCase() === searchTerm);
     
     if (!exists) {
       try {
-        setIsAdding(true);
-        const data = await createExplanation({
+        const data = await createMutation.mutateAsync({
           word: searchTerm,
         });
         await navigate({
@@ -99,8 +68,6 @@ function RouteComponent() {
         });
       } catch (error) {
         console.error('Failed to create explanation:', error);
-      } finally {
-        setIsAdding(false);
       }
     }
   };
@@ -114,7 +81,7 @@ function RouteComponent() {
       
       if (!exists) {
         try {
-          const data = await createExplanation({
+          const data = await createMutation.mutateAsync({
             word: searchTerm,
           });
           await navigate({
@@ -167,32 +134,45 @@ function RouteComponent() {
               />
               <Button 
                 size="icon"
-                disabled={!query.trim() || isAdding}
+                disabled={!query.trim() || createMutation.isPending}
                 onClick={onAdd}
                 className="rounded-full h-12 w-12 flex items-center justify-center"
               >
-                {isAdding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
               </Button>
             </div>
           </div>
           
           <ul className="w-full space-y-2">
-            {explanations.map((explanation) => (
-              <li key={explanation._id}>
-                <button
-                  className="text-pink-500 hover:text-pink-700 cursor-pointer w-full text-center py-2"
-                  onClick={() => onWordClick(explanation)}
-                >
-                  {explanation.word}
-                </button>
-              </li>
-            ))}
-            {/* Skeleton items for empty spaces */}
-            {Array.from({ length: skeletonCount }).map((_, index) => (
-              <li key={`skeleton-${index}`} className="py-2 flex justify-center">
-                <Skeleton className="h-6 w-3/4 animate-pulse" />
-              </li>
-            ))}
+            {isLoading ? (
+              Array.from({ length: limit }).map((_, index) => (
+                <li key={`loading-${index}`} className="py-2 flex justify-center">
+                  <Skeleton className="h-6 w-3/4 animate-pulse" />
+                </li>
+              ))
+            ) : (
+              <>
+                {explanations.map((explanation) => (
+                  <li key={explanation._id}>
+                    <button
+                      className="text-pink-500 hover:text-pink-700 cursor-pointer w-full text-center py-2"
+                      onClick={() => onWordClick(explanation)}
+                    >
+                      {explanation.word}
+                      {explanation.entries.length === 0 && (
+                        <Loader2 className="inline-block ml-2 h-4 w-4 animate-spin" />
+                      )}
+                    </button>
+                  </li>
+                ))}
+                {/* Skeleton items for empty spaces */}
+                {Array.from({ length: skeletonCount }).map((_, index) => (
+                  <li key={`skeleton-${index}`} className="py-2 flex justify-center">
+                    <Skeleton className="h-6 w-3/4 animate-pulse" />
+                  </li>
+                ))}
+              </>
+            )}
           </ul>
         </div>
 

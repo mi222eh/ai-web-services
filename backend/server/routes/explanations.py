@@ -4,6 +4,7 @@ from fastapi import HTTPException
 from datetime import datetime
 
 from server.services.synonym_service.ai import create_and_validate_synonym
+from server.services.synonym_service.worker import worker
 from ..models import CreateSynonymDTO, Explanation, ExplanationEntry, PaginatedResponse
 from fastapi import APIRouter
 
@@ -18,31 +19,22 @@ router = APIRouter()
 async def create_synonym(synonym: CreateSynonymDTO) -> Explanation:
     logger.info(f"Creating synonym for word: {synonym.word}")
 
-    try:
-        result = create_and_validate_synonym(synonym.word)
-    except Exception as e:
-        logger.error(f"Failed to create and validate synonym: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
     existing = await Explanation.find_one(Explanation.word == synonym.word)
-    if not existing:
-        existing = Explanation(word=synonym.word, entries=[])
-        existing.created_at = datetime.now()
-        logger.info(f"Created new explanation for word: {synonym.word}")
-    else:
-        existing.updated_at = datetime.now()
-        logger.info(f"Updated existing explanation for word: {synonym.word}")
+    if existing:
+        logger.info(f"Word already exists: {synonym.word}")
+        return existing
 
-    existing.entries.append(
-        ExplanationEntry(synonyms=result.synonyms, explanation=result.explanation)
-    )
+    # Create new explanation without entries
+    new_explanation = Explanation(word=synonym.word, entries=[])
+    new_explanation.created_at = datetime.now()
+    await new_explanation.save()
+    logger.info(f"Created new explanation for word: {synonym.word}")
 
-    if existing.id:
-        await existing.save()
-    else:
-        await existing.save()
-    logger.info(f"Saved validated explanation for word: {synonym.word}")
-    return existing
+    # Add task to worker queue
+    worker.add_task(new_explanation.id)
+    logger.info(f"Added explanation to worker queue: {synonym.word}")
+
+    return new_explanation
 
 
 @router.get("")
@@ -91,20 +83,16 @@ async def get_synonym(id: PydanticObjectId) -> Explanation:
 async def update_synonym(id: PydanticObjectId) -> Explanation:
     logger.info(f"Updating synonym with id: {id}")
     try:
-        synonym = await Explanation.get(id)
+        explanation = await Explanation.get(id)
     except Exception:
         logger.error(f"Synonym with id {id} not found")
         raise HTTPException(status_code=404, detail="Synonym not found")
 
     try:
-        update = create_and_validate_synonym(synonym.word)
-        synonym.entries.append(
-            ExplanationEntry(synonyms=update.synonyms, explanation=update.explanation)
-        )
-        synonym.updated_at = datetime.now()
-        await synonym.save()
-        logger.info(f"Updated and saved synonym with id: {id}")
-        return synonym
+        # Add to worker queue with retry flag
+        worker.add_task(explanation.id, is_retry=True)
+        logger.info(f"Added explanation to worker queue for retry: {explanation.word}")
+        return explanation
     except Exception as e:
         logger.error(f"Failed to update synonym: {e}")
         raise HTTPException(status_code=500, detail=str(e))

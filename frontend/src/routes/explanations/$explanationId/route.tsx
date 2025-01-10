@@ -17,47 +17,48 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Explanation } from "@/types/models";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { Loader2, Trash2, History } from "lucide-react";
 import { useState } from "react";
-import { fetchExplanationById, updateExplanation, deleteExplanation } from "@/api/explanations";
+import { useExplanation, useUpdateExplanation, useDeleteExplanation } from "@/api/explanations";
 
 export const Route = createFileRoute("/explanations/$explanationId")({
   component: RouteComponent,
-  loader: async (args) => {
-    return fetchExplanationById(args.params.explanationId);
-  },
 });
 
 function RouteComponent() {
-  const explanation = Route.useLoaderData();
+  const { explanationId } = Route.useParams();
   const navigate = useNavigate();
-  const [isLoading, setIsLoading] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+
+  const { data: explanation, isLoading } = useExplanation(explanationId);
+  const updateMutation = useUpdateExplanation();
+  const deleteMutation = useDeleteExplanation();
+
+  if (isLoading || !explanation) {
+    return (
+      <div className="flex justify-center items-center h-[calc(100vh-8rem)]">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   const entry = explanation.entries[explanation.entries.length - 1];
 
   const onRetry = async () => {
-    setIsLoading(true);
     try {
-      await updateExplanation(explanation._id);
-      await Route.router?.invalidate();
-    } finally {
-      setIsLoading(false);
+      await updateMutation.mutateAsync(explanation._id);
+    } catch (error) {
+      console.error('Failed to update explanation:', error);
     }
   };
 
   const onDelete = async () => {
-    setIsDeleting(true);
     try {
-      await deleteExplanation(explanation._id);
-      await Route.router?.invalidate();
+      await deleteMutation.mutateAsync(explanation._id);
       await navigate({ to: "/explanations" });
     } finally {
-      setIsDeleting(false);
       setShowDeleteDialog(false);
     }
   };
@@ -78,7 +79,7 @@ function RouteComponent() {
               onClick={onDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
-              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Ta bort
             </AlertDialogAction>
           </AlertDialogFooter>
@@ -98,7 +99,12 @@ function RouteComponent() {
           </Button>
         </CardHeader>
         <CardContent>
-          {showHistory ? (
+          {explanation.entries.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8">
+              <Loader2 className="h-8 w-8 animate-spin mb-4" />
+              <p className="text-gray-500">Genererar förklaring...</p>
+            </div>
+          ) : showHistory ? (
             <div className="space-y-6">
               {explanation.entries.map((historyEntry, index) => (
                 <div key={index} className="p-4 rounded-lg border">
@@ -123,29 +129,32 @@ function RouteComponent() {
               <div className="flex flex-col">
                 <span>Synonymer:</span>
                 <div className="flex flex-wrap">
-                  {entry.synonyms.map((c) => (
+                  {entry?.synonyms.map((c) => (
                     <Badge key={c} className="mr-2">{c}</Badge>
                   ))}
                 </div>
               </div>
               <div className="flex flex-col mt-4">
                 <span>Förklaring:</span>
-                <span dangerouslySetInnerHTML={{ __html: entry.explanation }}></span>
+                <span dangerouslySetInnerHTML={{ __html: entry?.explanation }}></span>
               </div>
             </div>
           )}
         </CardContent>
         <CardFooter className="flex gap-2">
-          <Button onClick={onRetry} disabled={isLoading || isDeleting}>
-            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+          <Button 
+            onClick={onRetry} 
+            disabled={updateMutation.isPending || deleteMutation.isPending || explanation.entries.length === 0}
+          >
+            {updateMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Försök igen
           </Button>
           <Button 
             variant="destructive" 
             onClick={() => setShowDeleteDialog(true)} 
-            disabled={isLoading || isDeleting}
+            disabled={updateMutation.isPending || deleteMutation.isPending}
           >
-            {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            {deleteMutation.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             <Trash2 className="h-4 w-4" />
           </Button>
         </CardFooter>
