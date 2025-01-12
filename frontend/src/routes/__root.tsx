@@ -1,48 +1,45 @@
-import * as React from "react";
-import {
-  Link,
-  Outlet,
-  createRootRoute,
-  linkOptions,
-} from "@tanstack/react-router";
-import { TanStackRouterDevtools } from "@tanstack/router-devtools";
+import { Link, Outlet, useLocation, createRootRoute } from "@tanstack/react-router"
+import "../app.css"
 
-const links = [
-  linkOptions({
-    to: "/explanations",
-    label: "Förklaringar",
-  }),
-  // linkOptions({
-  //   to: "/explanations",
-  //   label: "Förklaringar",
-  // }),
-];
+function RootComponent() {
+  const location = useLocation()
+  const isHome = location.pathname === "/"
+
+  return (
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className="container flex h-14 items-center">
+          <div className="mr-4 hidden md:flex">
+            <Link
+              to="/"
+              className={`mr-6 flex items-center space-x-2 ${
+                isHome ? "text-foreground" : "text-foreground/60 hover:text-foreground/80"
+              }`}
+            >
+              <span className="hidden font-bold sm:inline-block">AI Web Services</span>
+            </Link>
+            <nav className="flex items-center space-x-6 text-sm font-medium">
+              <Link
+                to="/explanations"
+                className={
+                  location.pathname === "/explanations"
+                    ? "text-foreground"
+                    : "text-foreground/60 hover:text-foreground/80"
+                }
+              >
+                Förklaringar
+              </Link>
+            </nav>
+          </div>
+        </div>
+      </header>
+      <main className="container py-6">
+        <Outlet />
+      </main>
+    </div>
+  )
+}
 
 export const Route = createRootRoute({
   component: RootComponent,
-});
-
-function RootComponent() {
-  return (
-    <>
-      <div className="p-2 flex gap-2 text-lg justify-center items-center">
-        {links.map((link) => (
-          <Link
-            key={link.to}
-            to={link.to}
-            activeProps={{
-              className: "font-bold text underline",
-            }}
-          >
-            {link.label}
-          </Link>
-        ))}
-      </div>
-      <hr />
-      <div className="container mx-auto px-4 py-8">
-        <Outlet />
-      </div>
-      <TanStackRouterDevtools position="bottom-right" />
-    </>
-  );
-}
+})
