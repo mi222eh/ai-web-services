@@ -16,6 +16,7 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useMutation } from '@tanstack/react-query';
 
 const searchParam = z.object({
   query: z.string().default("").catch(""),
@@ -115,6 +116,16 @@ function RouteComponent() {
   // Calculate how many skeleton items to show
   const skeletonCount = Math.max(0, limit - explanations.length);
 
+  const createExplanationMutation = useCreateExplanation();
+
+  const handleCreateExplanation = async () => {
+    try {
+      await createExplanationMutation.mutateAsync({ word: query.trim().toLowerCase() });
+    } catch (error) {
+      console.error('Failed to create explanation:', error);
+    }
+  };
+
   return (
     <div className="p-4 flex flex-col min-h-[calc(100vh-4rem)]">
       <div className="p-2 flex gap-2 text-lg justify-center items-center">
@@ -133,9 +144,8 @@ function RouteComponent() {
                 className="border rounded-full px-6 py-3 text-base shadow-sm focus:ring-2 focus:ring-pink-500 w-80"
               />
               <Button 
-                size="icon"
+                onClick={handleCreateExplanation} 
                 disabled={!query.trim() || createMutation.isPending}
-                onClick={onAdd}
                 className="rounded-full h-12 w-12 flex items-center justify-center"
               >
                 {createMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}

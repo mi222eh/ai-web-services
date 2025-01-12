@@ -7,9 +7,11 @@ from typing import Optional, Tuple
 from beanie import PydanticObjectId
 from motor.motor_asyncio import AsyncIOMotorClient
 from datetime import datetime
+import json
 
 from ...models import Explanation, ExplanationEntry
 from .ai import create_and_validate_synonym
+from ...services.websocket_service import ConnectionManager
 
 logger = logging.getLogger(__name__)
 
@@ -28,6 +30,7 @@ class AIWorker:
 
     def _initialize(self):
         self.task_queue = queue.Queue()
+        self.processing_lock = threading.Lock()
         self._start_threads()
         logger.info("AI Worker and Scanner initialized and started")
 
@@ -65,9 +68,10 @@ class AIWorker:
                 )
 
                 try:
-                    loop.run_until_complete(
-                        self._process_explanation(explanation_id, is_retry, db)
-                    )
+                    with self.processing_lock:
+                        loop.run_until_complete(
+                            self._process_explanation(explanation_id, is_retry, db)
+                        )
                 except Exception as e:
                     logger.error(f"Error processing explanation {explanation_id}: {e}")
 
@@ -78,32 +82,20 @@ class AIWorker:
             client.close()
 
     def _run_scanner(self):
-        """Scanner thread looking for empty entries"""
+        """Scanner thread looking for empty explanations"""
         loop, client = self._setup_async_thread()
         db = client.worddb
 
-        # Scanner settings
-        current_timeout = 30  # Start with 30 seconds
-        max_timeout = 300  # Max 5 minutes
-        consecutive_empty = 0
-
         try:
             while True:
-                try:
-                    # Scan for empty entries
-                    found_entries = loop.run_until_complete(
-                        self._scan_empty_entries(db)
-                    )
-                    current_timeout = self._adjust_timeout(
-                        found_entries, current_timeout, max_timeout, consecutive_empty
-                    )
-                    consecutive_empty = 0 if found_entries else consecutive_empty + 1
-
-                    # Wait for next scan
-                    loop.run_until_complete(asyncio.sleep(current_timeout))
-                except Exception as e:
-                    logger.error(f"Error in scanner: {e}")
-                    loop.run_until_complete(asyncio.sleep(5))
+                if not self.processing_lock.locked():
+                    try:
+                        loop.run_until_complete(self._scan_empty_explanations(db))
+                    except Exception as e:
+                        logger.error(f"Error scanning explanations: {e}")
+                asyncio.run(asyncio.sleep(5))
+        except Exception as e:
+            logger.error(f"Error in scanner thread: {e}")
         finally:
             client.close()
 
@@ -122,22 +114,15 @@ class AIWorker:
             return new_timeout
         return current
 
-    async def _scan_empty_entries(self, db) -> bool:
-        """Find explanations with empty entries"""
-        try:
-            empty_entries = await db.synonyms.find({"entries": {"$size": 0}}).to_list(
-                length=None
-            )
-
-            if empty_entries:
-                logger.info(f"Found {len(empty_entries)} empty entries")
-                for entry in empty_entries:
-                    self.add_task(entry["_id"], is_retry=False)
-                return True
-            return False
-        except Exception as e:
-            logger.error(f"Error scanning empty entries: {e}")
-            return False
+    async def _scan_empty_explanations(self, db):
+        """Scan for explanations without entries"""
+        cursor = db.synonyms.find({"entries": {"$size": 0}})
+        async for doc in cursor:
+            explanation = Explanation(**doc)
+            self.add_task(explanation.id)
+            logger.info(f"Found empty explanation: {explanation.word}")
+            return True  # Found at least one
+        return False  # Found none
 
     async def _process_explanation(
         self, explanation_id: PydanticObjectId, is_retry: bool, db
@@ -184,8 +169,30 @@ class AIWorker:
                 },
             )
             logger.info(f"Successfully processed: {explanation.word}")
+
+            # After successful processing, notify clients
+            await ConnectionManager.send_message(
+                json.dumps(
+                    {
+                        "type": "explanation_ready",
+                        "id": str(explanation_id),
+                        "word": explanation.word,
+                    }
+                )
+            )
+
         except Exception as e:
-            logger.error(f"Failed to process explanation {explanation_id}: {e}")
+            logger.error(f"Error processing explanation {explanation_id}: {e}")
+            # Notify clients about the error
+            await ConnectionManager.send_message(
+                json.dumps(
+                    {
+                        "type": "explanation_error",
+                        "id": str(explanation_id),
+                        "error": str(e),
+                    }
+                )
+            )
 
     def add_task(self, explanation_id: PydanticObjectId, is_retry: bool = False):
         """Add a new explanation to be processed"""

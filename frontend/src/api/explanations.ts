@@ -1,6 +1,7 @@
 import { CreateSynonymDTO, Explanation } from '@/types/models';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { toast } from 'react-hot-toast';
 
 const API_URL = '/api/explanations';
 
@@ -35,7 +36,7 @@ const fetchExplanationById = async (id: string): Promise<Explanation> => {
   return response.data;
 };
 
-const createExplanation = async (data: CreateSynonymDTO): Promise<Explanation> => {
+export const createExplanation = async (data: { word: string }): Promise<Explanation> => {
   const response = await axios.post<Explanation>(API_URL, data);
   return response.data;
 };
@@ -68,9 +69,14 @@ export const useExplanation = (id: string) => {
 export const useCreateExplanation = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: createExplanation,
+    mutationFn: (data: { word: string }) => createExplanation(data),
     onSuccess: () => {
+      toast.success('Förklaringen har skapats!');
       queryClient.invalidateQueries({ queryKey: ['explanations'] });
+    },
+    onError: (error: any) => {
+      toast.error('Misslyckades med att skapa förklaring.');
+      console.error('Error creating explanation:', error);
     },
   });
 };
