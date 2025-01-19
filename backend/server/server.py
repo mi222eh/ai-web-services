@@ -66,11 +66,23 @@ async def auth_middleware(request: Request, call_next):
     print(f"Path: {request.url.path}")
     print(f"Query Params: {request.query_params}")
     print(f"Headers: {request.headers.get('cookie', 'No cookie')}")
+    print(f"All Headers: {dict(request.headers)}")
+    
+    # Skip auth for WebSocket connections - they handle their own auth
+    upgrade_header = request.headers.get("upgrade", "").lower()
+    connection_header = request.headers.get("connection", "").lower()
+    print(f"Upgrade header: {upgrade_header}")
+    print(f"Connection header: {connection_header}")
+    
+    if "websocket" in upgrade_header or "websocket" in connection_header:
+        print("WebSocket connection detected, skipping auth middleware")
+        return await call_next(request)
     
     # Skip auth for these paths
     public_paths = [
         "/api/auth/login",
         "/api/auth/check",
+        "/api/ws",  # WebSocket endpoint
         "/static/index.html",
         "/static/assets",  # Your frontend assets
         "/docs",  # API docs if you need them

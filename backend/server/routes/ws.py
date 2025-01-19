@@ -5,38 +5,51 @@ from ..config import settings
 
 router = APIRouter()
 
-@router.websocket("/ws")
+@router.websocket("")
 async def websocket_endpoint(websocket: WebSocket):
+    print("\n=== WebSocket Connection Attempt ===")
+    
+    # Accept connection first
     await websocket.accept()
-    try:
-        while True:
-            # Get the token from the cookie
-            cookies = websocket.cookies
-            token = cookies.get("access_token")
+    print("WebSocket: Connection accepted")
+    
+    # Get the token from the cookie
+    cookies = websocket.cookies
+    token = cookies.get("access_token")
+    print("WebSocket cookies:", cookies)
+    print("WebSocket token:", token)
+    
+    if not token or not token.startswith("Bearer "):
+        print("WebSocket: No valid token format")
+        await websocket.close(code=4001, reason="No valid token")
+        return
             
-            if not token or not token.startswith("Bearer "):
-                await websocket.close(code=1008, reason="Not authenticated")
-                return
+    try:
+        # Verify the token
+        token_value = token.split(" ")[1]
+        print("WebSocket: Attempting to verify token:", token_value[:20] + "...")
+        payload = jwt.decode(
+            token_value, 
+            settings.AUTH_SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+        print("WebSocket: Token verified, payload:", payload)
+        
+        while True:
+            # Wait for messages
+            data = await websocket.receive_text()
+            await websocket.send_text(f"Message text was: {data}")
                 
-            try:
-                # Verify the token
-                token_value = token.split(" ")[1]
-                payload = jwt.decode(
-                    token_value, 
-                    settings.AUTH_SECRET_KEY,
-                    algorithms=[ALGORITHM]
-                )
-                
-                # Wait for messages
-                data = await websocket.receive_text()
-                await websocket.send_text(f"Message text was: {data}")
-                
-            except jwt.JWTError:
-                await websocket.close(code=1008, reason="Invalid token")
-                return
-                
+    except jwt.JWTError as e:
+        print("WebSocket: Token verification failed:", str(e))
+        await websocket.close(code=4002, reason="Invalid token")
+        return
     except WebSocketDisconnect:
-        print("WebSocket disconnected")
+        print("WebSocket: Client disconnected")
+    except Exception as e:
+        print("WebSocket: Unexpected error:", str(e))
+        await websocket.close(code=4003, reason="Server error")
+        raise
 
 # Function to notify clients when explanation is ready
 async def notify_clients(message: str):

@@ -18,6 +18,9 @@ export function useWebSocket() {
     // Use relative path and auto-detect protocol
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/api/ws`;
+    console.log('Connecting to WebSocket:', wsUrl);
+    
+    // Create WebSocket with credentials
     socketRef.current = new WebSocket(wsUrl);
 
     socketRef.current.onmessage = (event) => {
