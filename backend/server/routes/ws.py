@@ -2,6 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from typing import Dict
 from ..middleware.auth import jwt, ALGORITHM
 from ..config import settings
+from ..services.connection_manager import ConnectionManager
 
 router = APIRouter()
 
@@ -35,22 +36,24 @@ async def websocket_endpoint(websocket: WebSocket):
         )
         print("WebSocket: Token verified, payload:", payload)
         
-        while True:
-            # Wait for messages
-            data = await websocket.receive_text()
-            await websocket.send_text(f"Message text was: {data}")
+        # Add connection to manager
+        await ConnectionManager.connect(websocket)
+        print("WebSocket: Added to connection manager")
+        
+        try:
+            while True:
+                # Wait for messages
+                data = await websocket.receive_text()
+                await websocket.send_text(f"Message text was: {data}")
+        except WebSocketDisconnect:
+            print("WebSocket: Client disconnected")
+            await ConnectionManager.disconnect(websocket)
                 
     except jwt.JWTError as e:
         print("WebSocket: Token verification failed:", str(e))
         await websocket.close(code=4002, reason="Invalid token")
         return
-    except WebSocketDisconnect:
-        print("WebSocket: Client disconnected")
     except Exception as e:
         print("WebSocket: Unexpected error:", str(e))
         await websocket.close(code=4003, reason="Server error")
         raise
-
-# Function to notify clients when explanation is ready
-async def notify_clients(message: str):
-    await ConnectionManager.send_message(message)
