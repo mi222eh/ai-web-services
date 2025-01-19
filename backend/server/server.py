@@ -5,16 +5,17 @@ import asyncio
 from functools import partial
 
 from beanie import init_beanie
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from motor.motor_asyncio import AsyncIOMotorClient
 
 from server.services.static_service import STATIC_PATH
 from server.models import Explanation
-from server.routes import router
-
+from server.routes import router, auth
+from .middleware.auth import require_auth_dependency
+from fastapi import Request
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -34,8 +35,8 @@ app = FastAPI(lifespan=lifespan, docs_url="/docs/")
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=["*"],  # Your Vite dev server
+    allow_credentials=True,  # This is crucial for cookies
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -44,7 +45,72 @@ app.add_middleware(
 app.mount("/static", StaticFiles(directory=str(STATIC_PATH)), name="static")
 
 # Include the router in the app
-app.include_router(router, prefix="/api", tags=["api"])
+app.include_router(
+    router,
+    prefix="/api",
+    tags=["api"],
+)
+
+# Include the auth router
+app.include_router(
+    auth.router,
+    prefix="/api/auth",
+    tags=["auth"],
+)
+
+# Protect the static files except for login-related ones
+@app.middleware("http")
+async def auth_middleware(request: Request, call_next):
+    print("\n=== Auth Middleware ===")
+    print(f"Method: {request.method}")
+    print(f"Path: {request.url.path}")
+    print(f"Query Params: {request.query_params}")
+    print(f"Headers: {request.headers.get('cookie', 'No cookie')}")
+    
+    # Skip auth for these paths
+    public_paths = [
+        "/api/auth/login",
+        "/api/auth/check",
+        "/static/index.html",
+        "/static/assets",  # Your frontend assets
+        "/docs",  # API docs if you need them
+        "/openapi.json"  # API schema if you need it
+    ]
+    
+    path = request.url.path
+    print(f"\nChecking path against public paths: {path}")
+    
+    # Allow public paths
+    if any(path.startswith(public_path) for public_path in public_paths):
+        print(f"Public path detected: {path}")
+        response = await call_next(request)
+        print(f"Public path response status: {response.status_code}")
+        return response
+    
+    # Require auth for everything else
+    try:
+        print(f"\nAttempting auth for protected path: {path}")
+        await require_auth_dependency(request)
+        print("Auth successful!")
+        response = await call_next(request)
+        print(f"Protected path response status: {response.status_code}")
+        return response
+    except HTTPException as e:
+        print(f"Auth failed with error: {e.detail}")
+        if path == "/" or not path.startswith("/api/"):
+            print(f"Redirecting to login page")
+            return RedirectResponse(url="/auth/login")
+        print(f"Returning 401 for API route")
+        return JSONResponse(
+            status_code=e.status_code,
+            content={"detail": e.detail}
+        )
+    except Exception as e:
+        print(f"Unexpected error in auth middleware: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Internal server error"}
+        )
 
 
 # Catch all route to serve index.html

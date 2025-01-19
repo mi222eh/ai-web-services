@@ -7,6 +7,9 @@ from server.services.synonym_service.ai import create_and_validate_synonym
 from server.services.synonym_service.worker import worker
 from ..models import CreateSynonymDTO, Explanation, ExplanationEntry, PaginatedResponse
 from fastapi import APIRouter
+from pydantic import BaseModel
+from typing import Annotated
+from fastapi import Query
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -36,17 +39,26 @@ async def create_synonym(synonym: CreateSynonymDTO) -> Explanation:
 
     return new_explanation
 
+class GetSynonymsQuery(BaseModel):
+    skip: int = 0
+    limit: int = 10
+    query: str | None = None
 
 @router.get("")
 async def get_synonyms(
-    skip: int = 0, limit: int = 10, query: str | None = None
+    skip: int = Query(default=0, ge=0),
+    limit: int = Query(default=10, ge=1),
+    query: str = Query(default="", min_length=0)
 ) -> PaginatedResponse[Explanation]:
-    logger.info(f"Fetching synonyms with skip={skip}, limit={limit}, query={query}")
+    logger.info(f"[GET /explanations] Received request with params: skip={skip}, limit={limit}, query={query!r}")
+    logger.info(f"[GET /explanations] Query type: {type(query)}, Query value: {query!r}")
 
     # Start with a base query using Beanie's query builder
     base_query = Explanation.find()
 
-    if query:
+    # Only apply query filter if query is not empty string
+    if query.strip():
+        logger.info(f"[GET /explanations] Applying query filter: {query!r}")
         # Use Beanie's query operators for case-insensitive search
         base_query = base_query.find(
             {
@@ -56,12 +68,16 @@ async def get_synonyms(
                 ]
             }
         )
+    else:
+        logger.info("[GET /explanations] No query filter applied")
 
     # Get total count for pagination
     total = await base_query.count()
+    logger.info(f"[GET /explanations] Total results: {total}")
 
     # Get paginated results
     items = await base_query.skip(skip).limit(limit).to_list()
+    logger.info(f"[GET /explanations] Returning {len(items)} items")
 
     return PaginatedResponse[Explanation](
         items=items, total=total, skip=skip, limit=limit

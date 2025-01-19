@@ -8,7 +8,11 @@ export default defineConfig({
   plugins: [TanStackRouterVite({}), react()],
   server: {
     proxy: {
-      "/api": "http://localhost:8000/",
+      "/api": {
+        target: "http://localhost:8000",
+        changeOrigin: true,
+        ws: true, // Enable WebSocket proxy
+      }
     }
   },
   build: {

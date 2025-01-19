@@ -14,7 +14,8 @@
                 "--reload"
             ],
             "cwd": "${workspaceFolder}/backend",
-            "jinja": true
+            "jinja": true,
+            "python": ".venv/Scripts/python"
         }
     ]
 }

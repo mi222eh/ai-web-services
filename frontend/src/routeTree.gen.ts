@@ -11,16 +11,29 @@
 // Import Routes
 
 import { Route as rootRoute } from './routes/__root'
+import { Route as LoginImport } from './routes/login'
 import { Route as AboutImport } from './routes/about'
+import { Route as AuthImport } from './routes/_auth'
 import { Route as ExplanationsRouteImport } from './routes/explanations/route'
 import { Route as IndexImport } from './routes/index'
 import { Route as ExplanationsExplanationIdRouteImport } from './routes/explanations/$explanationId/route'
 
 // Create/Update Routes
 
+const LoginRoute = LoginImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => rootRoute,
+} as any)
+
 const AboutRoute = AboutImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRoute,
+} as any)
+
+const AuthRoute = AuthImport.update({
+  id: '/_auth',
   getParentRoute: () => rootRoute,
 } as any)
 
@@ -61,11 +74,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExplanationsRouteImport
       parentRoute: typeof rootRoute
     }
+    '/_auth': {
+      id: '/_auth'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof AuthImport
+      parentRoute: typeof rootRoute
+    }
     '/about': {
       id: '/about'
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutImport
+      parentRoute: typeof rootRoute
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginImport
       parentRoute: typeof rootRoute
     }
     '/explanations/$explanationId': {
@@ -94,14 +121,18 @@ const ExplanationsRouteRouteWithChildren =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/explanations': typeof ExplanationsRouteRouteWithChildren
+  '': typeof AuthRoute
   '/about': typeof AboutRoute
+  '/login': typeof LoginRoute
   '/explanations/$explanationId': typeof ExplanationsExplanationIdRouteRoute
 }
 
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/explanations': typeof ExplanationsRouteRouteWithChildren
+  '': typeof AuthRoute
   '/about': typeof AboutRoute
+  '/login': typeof LoginRoute
   '/explanations/$explanationId': typeof ExplanationsExplanationIdRouteRoute
 }
 
@@ -109,20 +140,36 @@ export interface FileRoutesById {
   __root__: typeof rootRoute
   '/': typeof IndexRoute
   '/explanations': typeof ExplanationsRouteRouteWithChildren
+  '/_auth': typeof AuthRoute
   '/about': typeof AboutRoute
+  '/login': typeof LoginRoute
   '/explanations/$explanationId': typeof ExplanationsExplanationIdRouteRoute
 }
 
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/explanations' | '/about' | '/explanations/$explanationId'
+  fullPaths:
+    | '/'
+    | '/explanations'
+    | ''
+    | '/about'
+    | '/login'
+    | '/explanations/$explanationId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/explanations' | '/about' | '/explanations/$explanationId'
+  to:
+    | '/'
+    | '/explanations'
+    | ''
+    | '/about'
+    | '/login'
+    | '/explanations/$explanationId'
   id:
     | '__root__'
     | '/'
     | '/explanations'
+    | '/_auth'
     | '/about'
+    | '/login'
     | '/explanations/$explanationId'
   fileRoutesById: FileRoutesById
 }
@@ -130,13 +177,17 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ExplanationsRouteRoute: typeof ExplanationsRouteRouteWithChildren
+  AuthRoute: typeof AuthRoute
   AboutRoute: typeof AboutRoute
+  LoginRoute: typeof LoginRoute
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ExplanationsRouteRoute: ExplanationsRouteRouteWithChildren,
+  AuthRoute: AuthRoute,
   AboutRoute: AboutRoute,
+  LoginRoute: LoginRoute,
 }
 
 export const routeTree = rootRoute
@@ -151,7 +202,9 @@ export const routeTree = rootRoute
       "children": [
         "/",
         "/explanations",
-        "/about"
+        "/_auth",
+        "/about",
+        "/login"
       ]
     },
     "/": {
@@ -163,8 +216,14 @@ export const routeTree = rootRoute
         "/explanations/$explanationId"
       ]
     },
+    "/_auth": {
+      "filePath": "_auth.tsx"
+    },
     "/about": {
       "filePath": "about.tsx"
+    },
+    "/login": {
+      "filePath": "login.tsx"
     },
     "/explanations/$explanationId": {
       "filePath": "explanations/$explanationId/route.tsx",

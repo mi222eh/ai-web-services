@@ -2,8 +2,12 @@ import { CreateSynonymDTO, Explanation } from '@/types/models';
 import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
+import { routerContext } from '@/lib/routerContext';
 
 const API_URL = '/api/explanations';
+
+// Configure axios defaults
+axios.defaults.withCredentials = true;
 
 export interface PaginatedResponse<T> {
   items: T[];
@@ -18,17 +22,20 @@ const fetchExplanations = async (
   limit: number = 10,
   query?: string
 ): Promise<PaginatedResponse<Explanation>> => {
-  const params = new URLSearchParams({
-    skip: skip.toString(),
-    limit: limit.toString(),
-  });
-  
-  if (query) {
-    params.append('query', query);
+  try {
+    console.log('fetchExplanations', skip, limit, query)
+    const response = await axios.get<PaginatedResponse<Explanation>>(`${API_URL}`,{
+      params: {
+        skip,
+        limit,
+        query
+      }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching explanations:', error);
+    return { items: [], total: 0, skip: 0, limit: 10 };
   }
-  
-  const response = await axios.get<PaginatedResponse<Explanation>>(`${API_URL}?${params}`);
-  return response.data;
 };
 
 const fetchExplanationById = async (id: string): Promise<Explanation> => {
@@ -55,6 +62,7 @@ export const useExplanations = (skip: number, limit: number, query?: string) => 
   return useQuery({
     queryKey: ['explanations', skip, limit, query],
     queryFn: () => fetchExplanations(skip, limit, query),
+    enabled: routerContext.auth.isAuthenticated,
   });
 };
 
@@ -62,7 +70,7 @@ export const useExplanation = (id: string) => {
   return useQuery({
     queryKey: ['explanation', id],
     queryFn: () => fetchExplanationById(id),
-    enabled: !!id,
+    enabled: !!id && routerContext.auth.isAuthenticated,
   });
 };
 

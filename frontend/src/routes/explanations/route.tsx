@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Explanation } from "@/types/models";
-import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Outlet, redirect, Navigate } from "@tanstack/react-router";
 import { zodValidator } from "@tanstack/zod-adapter";
 import { Loader2, Plus } from "lucide-react";
 import { useState } from "react";
@@ -16,7 +16,8 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMutation } from '@tanstack/react-query';
+import { queryClient } from "@/main";
+import { getAuthCheckQueryOptions } from "@/api/queries";
 
 const searchParam = z.object({
   query: z.string().default("").catch(""),
@@ -26,7 +27,24 @@ const searchParam = z.object({
 
 export const Route = createFileRoute("/explanations")({
   component: RouteComponent,
+  loader: async ({ context }) => {
+    console.log("Explanations loader: checking auth")
+    const isAuthenticated = await context.auth.checkAuth()
+    console.log("Explanations loader: auth check result", isAuthenticated)
+    
+    if (!isAuthenticated) {
+      console.log("Explanations loader: not authenticated, redirecting")
+      throw redirect({
+        to: '/login'
+      })
+    }
+    return null
+  },
   validateSearch: zodValidator(searchParam),
+  errorComponent: () => {
+    console.log("Explanations error: redirecting to login")
+    return <Navigate to="/login" />
+  }
 });
 
 function RouteComponent() {
@@ -52,7 +70,7 @@ function RouteComponent() {
     });
   };
 
-  const onAdd = async () => {
+  const handleCreateExplanation = async () => {
     if (createMutation.isPending || !query.trim()) return;
     
     const searchTerm = query.trim().toLowerCase();
@@ -75,24 +93,7 @@ function RouteComponent() {
 
   const onSearchKeyDown = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && e.currentTarget.value.trim()) {
-      const searchTerm = e.currentTarget.value.trim().toLowerCase();
-      
-      // Check if word exists in current results
-      const exists = explanations.some(exp => exp.word.toLowerCase() === searchTerm);
-      
-      if (!exists) {
-        try {
-          const data = await createMutation.mutateAsync({
-            word: searchTerm,
-          });
-          await navigate({
-            to: "/explanations/$explanationId",
-            params: { explanationId: data._id },
-          });
-        } catch (error) {
-          console.error('Failed to create explanation:', error);
-        }
-      }
+      await handleCreateExplanation();
     }
   };
 
@@ -116,23 +117,13 @@ function RouteComponent() {
   // Calculate how many skeleton items to show
   const skeletonCount = Math.max(0, limit - explanations.length);
 
-  const createExplanationMutation = useCreateExplanation();
-
-  const handleCreateExplanation = async () => {
-    try {
-      await createExplanationMutation.mutateAsync({ word: query.trim().toLowerCase() });
-    } catch (error) {
-      console.error('Failed to create explanation:', error);
-    }
-  };
-
   return (
-    <div className="p-4 flex flex-col min-h-[calc(100vh-4rem)]">
+    <div className="flex flex-col gap-4">
       <div className="p-2 flex gap-2 text-lg justify-center items-center">
         <Outlet />
       </div>
 
-      <div className="flex-1 flex flex-col items-center">
+      <div className="flex flex-col items-center gap-6">
         <div className="w-full max-w-2xl flex flex-col items-center gap-6">
           <div className="flex flex-col items-center gap-3">
             <div className="flex gap-2 items-center">
@@ -186,7 +177,7 @@ function RouteComponent() {
           </ul>
         </div>
 
-        <div className="mt-auto pt-4">
+        <div className="py-4">
           <Pagination>
             <PaginationContent>
               <PaginationItem>
