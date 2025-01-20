@@ -28,4 +28,4 @@ managed = true
 dev-dependencies = []
 
 [tool.hatch.build.targets.wheel]
-packages = ["server"]
+packages = ["server"] 

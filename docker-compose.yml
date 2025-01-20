@@ -1,19 +1,19 @@
 services:
-  mongo:
-    image: mongo:latest
-    ports:
-      - "27017:27017"
-    volumes:
-      - mongodb_data:/data/db
-
   app:
     build: .
     ports:
       - "8000:8000"
     environment:
-      - MONGODB_URL=mongodb://mongo:27017/
+      - MONGODB_URL=mongodb://mongodb:27017
+      - OLLAMA_HOST=http://host.docker.internal:11434
     depends_on:
-      - mongo
+      - mongodb
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
-volumes:
-  mongodb_data:
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data/mongodb:/data/db

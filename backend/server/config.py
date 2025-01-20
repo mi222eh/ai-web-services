@@ -1,14 +1,23 @@
+import os
+from pathlib import Path
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     # Auth
     AUTH_SECRET_KEY: str = "dev_secret_key_please_change_in_production_123456789"
     AUTH_PASSWORD: str = "dev_password"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 24 hours
+    AUTH_ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
 
     # Database
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "worddb"
+
+    # Ollama
+    OLLAMA_HOST: str = "http://localhost:11434"
+
+    # Static files
+    STATIC_PATH: Path = Path("./static")
 
     class Config:
         env_file = ".env"

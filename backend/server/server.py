@@ -81,12 +81,14 @@ async def auth_middleware(request: Request, call_next):
     # Skip auth for these paths
     public_paths = [
         "/api/auth/login",
+        "/auth/login",  # Frontend login route
         "/api/auth/check",
         "/api/ws",  # WebSocket endpoint
         "/static/index.html",
         "/static/assets",  # Your frontend assets
         "/docs",  # API docs if you need them
-        "/openapi.json"  # API schema if you need it
+        "/static",  # All static files
+        "/",  # Root path
     ]
     
     path = request.url.path
@@ -109,7 +111,7 @@ async def auth_middleware(request: Request, call_next):
         return response
     except HTTPException as e:
         print(f"Auth failed with error: {e.detail}")
-        if path == "/" or not path.startswith("/api/"):
+        if not path.startswith("/api/"):
             print(f"Redirecting to login page")
             return RedirectResponse(url="/auth/login")
         print(f"Returning 401 for API route")

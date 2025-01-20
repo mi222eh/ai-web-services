@@ -1,10 +1,10 @@
 import logging
 from beanie import PydanticObjectId
-from fastapi import HTTPException
+from fastapi import HTTPException, BackgroundTasks
 from datetime import datetime
 
 from server.services.synonym_service.ai import create_and_validate_synonym
-from server.services.synonym_service.worker import worker
+from server.services.synonym_service.worker import process_explanation
 from ..models import CreateSynonymDTO, Explanation, ExplanationEntry, PaginatedResponse
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -19,12 +19,16 @@ router = APIRouter()
 
 
 @router.post("")
-async def create_synonym(synonym: CreateSynonymDTO) -> Explanation:
+async def create_synonym(synonym: CreateSynonymDTO, background_tasks: BackgroundTasks) -> Explanation:
     logger.info(f"Creating synonym for word: {synonym.word}")
 
     existing = await Explanation.find_one(Explanation.word == synonym.word)
     if existing:
         logger.info(f"Word already exists: {synonym.word}")
+        if not existing.entries:
+            # If it exists but has no entries, process it in background
+            background_tasks.add_task(process_explanation, existing.id)
+            logger.info(f"Added existing explanation to background tasks: {existing.word}")
         return existing
 
     # Create new explanation without entries
@@ -33,9 +37,9 @@ async def create_synonym(synonym: CreateSynonymDTO) -> Explanation:
     await new_explanation.save()
     logger.info(f"Created new explanation for word: {synonym.word}")
 
-    # Add task to worker queue
-    worker.add_task(new_explanation.id)
-    logger.info(f"Added explanation to worker queue: {synonym.word}")
+    # Add to background tasks with lower priority
+    background_tasks.add_task(process_explanation, new_explanation.id)
+    logger.info(f"Added explanation to background tasks: {synonym.word}")
 
     return new_explanation
 
@@ -96,7 +100,7 @@ async def get_synonym(id: PydanticObjectId) -> Explanation:
 
 
 @router.put("/{id}")
-async def update_synonym(id: PydanticObjectId) -> Explanation:
+async def update_synonym(id: PydanticObjectId, background_tasks: BackgroundTasks) -> Explanation:
     logger.info(f"Updating synonym with id: {id}")
     try:
         explanation = await Explanation.get(id)
@@ -105,9 +109,9 @@ async def update_synonym(id: PydanticObjectId) -> Explanation:
         raise HTTPException(status_code=404, detail="Synonym not found")
 
     try:
-        # Add to worker queue with retry flag
-        worker.add_task(explanation.id, is_retry=True)
-        logger.info(f"Added explanation to worker queue for retry: {explanation.word}")
+        # Add to background tasks with retry flag
+        background_tasks.add_task(process_explanation, explanation.id, True)
+        logger.info(f"Added explanation to background tasks for retry: {explanation.word}")
         return explanation
     except Exception as e:
         logger.error(f"Failed to update synonym: {e}")
