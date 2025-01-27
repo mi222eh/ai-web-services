@@ -20,43 +20,6 @@ export const queryClient = new QueryClient({
   },
 })
 
-let socket: WebSocket | null = null;
-
-// Function to initialize WebSocket
-const initWebSocket = () => {
-  if (socket) {
-    socket.close();
-  }
-
-  socket = new WebSocket('ws://localhost:8000/api/ws')
-
-  socket.onmessage = (event) => {
-    console.log('WebSocket message received:', event.data)
-    try {
-      const data = JSON.parse(event.data)
-      
-      if (data.type === 'explanation_ready') {
-        // Invalidate queries to refetch data
-        queryClient.invalidateQueries(getExplanationsQueryOptions())
-        queryClient.invalidateQueries(getExplanationQueryOptions(data.id))
-        router.invalidate()
-      } else if (data.type === 'explanation_error') {
-        console.error('Explanation error:', data.error)
-      }
-    } catch (error) {
-      console.error('Error parsing WebSocket message:', error)
-    }
-  }
-
-  socket.onopen = () => {
-    console.log('WebSocket connection established')
-  }
-
-  socket.onclose = () => {
-    console.log('WebSocket connection closed')
-  }
-}
-
 // Set up a Router instance
 const router = createRouter({
   routeTree,

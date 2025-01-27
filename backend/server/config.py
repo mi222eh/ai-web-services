@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
     # Auth
     AUTH_SECRET_KEY: str = "dev_secret_key_please_change_in_production_123456789"
@@ -13,8 +14,9 @@ class Settings(BaseSettings):
     MONGODB_URL: str = "mongodb://localhost:27017"
     MONGODB_DB_NAME: str = "worddb"
 
-    # Ollama
-    OLLAMA_HOST: str = "http://localhost:11434"
+    # OpenAI
+    OPENAI_API_BASE: str = "http://localhost:1234/v1/"
+    OPENAI_MODEL: str = "gemma-2-2b-it"
 
     # Static files
     STATIC_PATH: Path = Path("./static")
@@ -23,4 +25,5 @@ class Settings(BaseSettings):
         env_file = ".env"
         env_file_encoding = "utf-8"
 
-settings = Settings() 
+
+settings = Settings()

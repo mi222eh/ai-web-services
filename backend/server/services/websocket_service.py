@@ -1,5 +1,6 @@
 from fastapi import WebSocket
-from typing import List
+from typing import List, Dict, Any
+import json
 
 
 class ConnectionManager:
@@ -15,6 +16,7 @@ class ConnectionManager:
         ConnectionManager.active_connections.remove(websocket)
 
     @staticmethod
-    async def send_message(message: str):
+    async def send_message(message: Dict[str, Any]):
+        json_message = json.dumps(message)
         for connection in ConnectionManager.active_connections:
-            await connection.send_text(message)
+            await connection.send_text(json_message)
