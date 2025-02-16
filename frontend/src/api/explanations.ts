@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { routerContext } from '@/lib/routerContext';
+import { getExplanationQueryOptions } from './queries';
 
 const API_URL = '/api/explanations';
 
@@ -97,11 +98,7 @@ export const useExplanations = (skip: number, limit: number, query?: string) => 
 };
 
 export const useExplanation = (id: string) => {
-  return useQuery({
-    queryKey: ['explanation', id],
-    queryFn: () => fetchExplanationById(id),
-    enabled: !!id && routerContext.auth.isAuthenticated,
-  });
+  return useQuery(getExplanationQueryOptions(id));
 };
 
 export const useCreateExplanation = () => {

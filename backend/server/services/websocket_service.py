@@ -17,6 +17,5 @@ class ConnectionManager:
 
     @staticmethod
     async def send_message(message: Dict[str, Any]):
-        json_message = json.dumps(message)
         for connection in ConnectionManager.active_connections:
-            await connection.send_text(json_message)
+            await connection.send_text(json.dumps(message))

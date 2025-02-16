@@ -15,8 +15,8 @@ class Settings(BaseSettings):
     MONGODB_DB_NAME: str = "worddb"
 
     # OpenAI
-    OPENAI_API_BASE: str = "http://localhost:1234/v1/"
-    OPENAI_MODEL: str = "gemma-2-2b-it"
+    OPENAI_API_BASE: str = "http://localhost:11434/v1/"
+    OPENAI_MODEL: str = "gemma2"
 
     # Static files
     STATIC_PATH: Path = Path("./static")

@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional, TypeVar, Generic, Literal
+from typing import Optional, TypeVar, Generic, Literal, Union
 from beanie import Document
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ExplanationEntry(BaseModel):
@@ -53,3 +53,23 @@ class PaginatedResponse(BaseModel, Generic[T]):
 class NuanceRequest(BaseModel):
     word1: str
     word2: str
+
+
+class ExplanationJobModel(BaseModel):
+    word: str
+    type: Literal["explanation"]
+    status: Literal["pending", "processing", "completed", "failed"]
+    created_at: datetime = datetime.now()
+    updated_at: Optional[datetime] = None
+
+class NuanceJobModel(BaseModel):
+    word1: str
+    word2: str
+    type: Literal["nuance"]
+    status: Literal["pending", "processing", "completed", "failed"]
+    created_at: datetime = datetime.now()
+    updated_at: Optional[datetime] = None
+
+class JobModel(Document):
+    job_id: str
+    job: Union[ExplanationJobModel, NuanceJobModel] = Field(discriminator="type")

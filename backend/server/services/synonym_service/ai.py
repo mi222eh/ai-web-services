@@ -148,10 +148,10 @@ def get_search_queries(synonym: str) -> list[str]:
     ]
 
     try:
-        response = openai.chat.completions.create(
+        response = openai.beta.chat.completions.parse(
             model=settings.OPENAI_MODEL,
             messages=messages,
-            response_format={"type": "json_object"},
+            response_format=SearchQueriesSchema,
             temperature=0.7,
         )
         result = SearchQueriesSchema.model_validate_json(
@@ -271,10 +271,10 @@ def create_synonym_ai(
             )
 
     try:
-        response = openai.chat.completions.create(
+        response = openai.beta.chat.completions.parse(
             model=settings.OPENAI_MODEL,
             messages=messages,
-            response_format={"type": "json_object"},
+            response_format=CreateSynonymSchema,
             temperature=0,
         )
         logger.info(f"Got response from AI model")
@@ -296,72 +296,73 @@ def create_and_validate_synonym(synonym: str) -> CreateSynonymSchema:
     search_info = get_search_results(synonym)
 
     # Generate results in parallel
-    results = generate_results_parallel(synonym, search_info)
+    results = generate_results_parallel(synonym, search_info, 1)
+    return results[0]
 
-    if not results:
-        logger.error("Failed to generate any valid synonym results")
-        raise Exception("Failed to generate synonym results")
+    # if not results:
+    #     logger.error("Failed to generate any valid synonym results")
+    #     raise Exception("Failed to generate synonym results")
 
-    if len(results) == 1:
-        logger.info("Only one result generated, returning without ranking")
-        return results[0]
+    # if len(results) == 1:
+    #     logger.info("Only one result generated, returning without ranking")
+    #     return results[0]
 
-    # Create a ranking prompt for the AI
-    ranking_messages = [
-        {
-            "role": "system",
-            "content": """Du är en språkexpert som ska ranka olika synonymförklaringar. 
-            Bedöm varje förklaring baserat på följande kriterier:
-            1. Precision och korrekthet i synonymerna
-            2. Tydlighet och användbarhet i förklaringen
-            3. Omfattning och fullständighet
+    # # Create a ranking prompt for the AI
+    # ranking_messages = [
+    #     {
+    #         "role": "system",
+    #         "content": """Du är en språkexpert som ska ranka olika synonymförklaringar. 
+    #         Bedöm varje förklaring baserat på följande kriterier:
+    #         1. Precision och korrekthet i synonymerna
+    #         2. Tydlighet och användbarhet i förklaringen
+    #         3. Omfattning och fullständighet
             
-            VIKTIGT! Du MÅSTE svara i detta JSON-format:
-            {
-                "rankings": [
-                    {"index": "1", "rank": 1, "motivation": "Bäst för att..."},
-                    {"index": "2", "rank": 2, "motivation": "Näst bäst för att..."},
-                    ...
-                ]
-            }""",
-        },
-        {
-            "role": "user",
-            "content": f"Ranka följande förklaringar för ordet '{synonym}':\n"
-            + "\n".join(
-                [
-                    f"Alternativ {i + 1}:\nSynonymer: {r.synonyms}\nFörklaring: {r.explanation}"
-                    for i, r in enumerate(results)
-                ]
-            ),
-        },
-    ]
+    #         VIKTIGT! Du MÅSTE svara i detta JSON-format:
+    #         {
+    #             "rankings": [
+    #                 {"index": "1", "rank": 1, "motivation": "Bäst för att..."},
+    #                 {"index": "2", "rank": 2, "motivation": "Näst bäst för att..."},
+    #                 ...
+    #             ]
+    #         }""",
+    #     },
+    #     {
+    #         "role": "user",
+    #         "content": f"Ranka följande förklaringar för ordet '{synonym}':\n"
+    #         + "\n".join(
+    #             [
+    #                 f"Alternativ {i + 1}:\nSynonymer: {r.synonyms}\nFörklaring: {r.explanation}"
+    #                 for i, r in enumerate(results)
+    #             ]
+    #         ),
+    #     },
+    # ]
 
-    try:
-        ranking_response = openai.chat.completions.create(
-            model=settings.OPENAI_MODEL,
-            messages=ranking_messages,
-            response_format={"type": "json_object"},
-            temperature=0,
-        )
+    # try:
+    #     ranking_response = openai.beta.chat.completions.parse(
+    #         model=settings.OPENAI_MODEL,
+    #         messages=ranking_messages,
+    #         response_format=RankingSchema,
+    #         temperature=0,
+    #     )
 
-        # Parse the ranking response and get the best result
-        rankings = RankingSchema.model_validate_json(
-            ranking_response.choices[0].message.content
-        )
-        best_index = min(rankings.rankings, key=lambda x: x.rank).index
-        best_result = results[int(best_index) - 1]
+    #     # Parse the ranking response and get the best result
+    #     rankings = RankingSchema.model_validate_json(
+    #         ranking_response.choices[0].message.content
+    #     )
+    #     best_index = min(rankings.rankings, key=lambda x: x.rank).index
+    #     best_result = results[int(best_index) - 1]
 
-        logger.info(
-            f"Successfully ranked results and selected best option (rank {best_index})"
-        )
-        return best_result
+    #     logger.info(
+    #         f"Successfully ranked results and selected best option (rank {best_index})"
+    #     )
+    #     return best_result
 
-    except Exception as e:
-        logger.error(f"Failed during ranking process: {e}")
-        # Fallback to first result if ranking fails
-        logger.info("Falling back to first generated result")
-        return results[0]
+    # except Exception as e:
+    #     logger.error(f"Failed during ranking process: {e}")
+    #     # Fallback to first result if ranking fails
+    #     logger.info("Falling back to first generated result")
+    #     return results[0]
 
 
 async def analyze_synonym_nuances(word1: str, word2: str) -> SynonymNuance:
@@ -411,10 +412,10 @@ async def analyze_synonym_nuances(word1: str, word2: str) -> SynonymNuance:
     ]
 
     try:
-        response = openai.chat.completions.create(
+        response = openai.beta.chat.completions.parse(
             model=settings.OPENAI_MODEL,
             messages=messages,
-            response_format={"type": "json_object"},
+            response_format=SynonymNuance,
             temperature=0.7,
         )
         return SynonymNuance.model_validate_json(response.choices[0].message.content)

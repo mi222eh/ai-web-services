@@ -86,84 +86,99 @@ function RouteComponent() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <Card className="p-4 max-w-3xl mx-auto w-full shadow-lg dark:bg-gray-800 dark:border-gray-700">
-        <CardHeader className="flex flex-row items-center justify-between pb-4 border-b dark:border-gray-700">
-          <CardTitle className="text-3xl font-bold text-pink-600 dark:text-pink-400">{explanation.word}</CardTitle>
-          <Button 
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate({ to: "/explanations" })}
-            className="ml-auto"
-          >
-            <X className="h-5 w-5" />
-          </Button>
-        </CardHeader>
-        <CardContent className="pt-4">
-          {explanation.entries.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8">
-              <Loader2 className="h-12 w-12 animate-spin mb-4 text-pink-500 dark:text-pink-400" />
-              <p className="text-lg text-gray-500 dark:text-gray-400">Genererar förklaring...</p>
-            </div>
-          ) : showHistory ? (
-            <div className="space-y-6">
-              {explanation.entries.map((historyEntry, index) => (
-                <div key={index} className="p-4 rounded-lg border border-pink-100 bg-pink-50/50 dark:border-pink-900/50 dark:bg-pink-950/10">
-                  <div className="space-y-2">
-                    <div>
-                      <h3 className="text-lg font-semibold mb-1 text-gray-700 dark:text-gray-200">Synonymer</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {historyEntry.synonyms.map((c) => (
-                          <Badge key={c} variant="secondary" className="px-3 py-1 text-base dark:bg-gray-700">{c}</Badge>
-                        ))}
+      <div className="container mx-auto space-y-6">
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-bold">Ordförklaring</h1>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => setShowHistory(!showHistory)}
+              className={showHistory ? "bg-muted" : ""}
+            >
+              <History className="h-5 w-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate({ to: "/explanations" })}
+            >
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between pb-4 border-b dark:border-gray-700">
+            <CardTitle className="text-2xl font-bold text-primary">{explanation.word}</CardTitle>
+          </CardHeader>
+          <CardContent className="pt-6">
+            {explanation.entries.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-12 w-12 animate-spin mb-4 text-primary" />
+                <p className="text-lg text-muted-foreground">Genererar förklaring...</p>
+              </div>
+            ) : showHistory ? (
+              <div className="space-y-6">
+                {explanation.entries.map((historyEntry, index) => (
+                  <div key={index} className="p-4 rounded-lg border bg-muted/50">
+                    <div className="space-y-4">
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Synonymer</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {historyEntry.synonyms.map((c) => (
+                            <Badge key={c} variant="secondary">{c}</Badge>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <h3 className="text-lg font-semibold mb-2">Förklaring</h3>
+                        <div className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: historyEntry.explanation }}></div>
                       </div>
                     </div>
-                    <div>
-                      <h3 className="text-lg font-semibold mb-1 text-gray-700 dark:text-gray-200">Förklaring</h3>
-                      <div className="text-gray-600 leading-relaxed dark:text-gray-300" dangerouslySetInnerHTML={{ __html: historyEntry.explanation }}></div>
-                    </div>
+                    <div className="mt-2 text-sm font-medium text-primary">Version {explanation.entries.length - index}</div>
                   </div>
-                  <div className="mt-2 text-sm font-medium text-pink-600 dark:text-pink-400">Version {explanation.entries.length - index}</div>
+                )).reverse()}
+              </div>
+            ) : (
+              <div className="space-y-6">
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Synonymer</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {entry?.synonyms.map((c) => (
+                      <Badge key={c} variant="secondary">{c}</Badge>
+                    ))}
+                  </div>
                 </div>
-              )).reverse()}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              <div>
-                <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200">Synonymer</h3>
-                <div className="flex flex-wrap gap-2">
-                  {entry?.synonyms.map((c) => (
-                    <Badge key={c} variant="secondary" className="px-3 py-1 text-base dark:bg-gray-700">{c}</Badge>
-                  ))}
+                <div>
+                  <h3 className="text-lg font-semibold mb-2">Förklaring</h3>
+                  <div className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: entry?.explanation }}></div>
                 </div>
               </div>
-              <div>
-                <h3 className="text-lg font-semibold mb-2 text-gray-700 dark:text-gray-200">Förklaring</h3>
-                <div className="text-gray-600 leading-relaxed dark:text-gray-300" dangerouslySetInnerHTML={{ __html: entry?.explanation }}></div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex gap-3 pt-4 border-t mt-4 dark:border-gray-700">
-          <Button 
-            onClick={onRetry} 
-            disabled={updateMutation.isPending || deleteMutation.isPending || explanation.entries.length === 0}
-            size="lg"
-            className="font-semibold"
-          >
-            {updateMutation.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-            Försök igen
-          </Button>
-          <Button 
-            variant="destructive" 
-            onClick={() => setShowDeleteDialog(true)} 
-            disabled={updateMutation.isPending || deleteMutation.isPending}
-            size="lg"
-          >
-            {deleteMutation.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
-            <Trash2 className="h-5 w-5" />
-          </Button>
-        </CardFooter>
-      </Card>
+            )}
+          </CardContent>
+          <CardFooter className="flex gap-3 pt-4 border-t mt-4">
+            <Button 
+              onClick={onRetry} 
+              disabled={updateMutation.isPending || deleteMutation.isPending || explanation.entries.length === 0}
+              size="lg"
+              className="font-semibold"
+            >
+              {updateMutation.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+              Försök igen
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={() => setShowDeleteDialog(true)} 
+              disabled={updateMutation.isPending || deleteMutation.isPending}
+              size="lg"
+            >
+              {deleteMutation.isPending && <Loader2 className="mr-2 h-5 w-5 animate-spin" />}
+              <Trash2 className="h-5 w-5" />
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
     </>
   );
 }
