@@ -1,7 +1,7 @@
 from datetime import datetime
-from typing import Optional, TypeVar, Generic
+from typing import Optional, TypeVar, Generic, Literal, Union
 from beanie import Document
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ExplanationEntry(BaseModel):
@@ -19,6 +19,23 @@ class Explanation(Document):
         name = "synonyms"
 
 
+class SynonymNuance(Document):
+    word1: str
+    word2: str
+    nuance_explanation: str
+    usage_examples: list[str]
+    context_differences: str
+    formality_level: Literal["word1_more_formal", "word2_more_formal", "equally_formal"]
+    emotional_weight: Literal["word1_stronger", "word2_stronger", "equally_strong"]
+    created_at: datetime = datetime.now()
+
+    class Settings:
+        name = "nuances"
+        indexes = [
+            [("word1", 1), ("word2", 1)],  # Compound index for word pairs
+        ]
+
+
 class CreateSynonymDTO(BaseModel):
     word: str
 
@@ -31,3 +48,28 @@ class PaginatedResponse(BaseModel, Generic[T]):
     total: int
     skip: int
     limit: int
+
+
+class NuanceRequest(BaseModel):
+    word1: str
+    word2: str
+
+
+class ExplanationJobModel(BaseModel):
+    word: str
+    type: Literal["explanation"]
+    status: Literal["pending", "processing", "completed", "failed"]
+    created_at: datetime = datetime.now()
+    updated_at: Optional[datetime] = None
+
+class NuanceJobModel(BaseModel):
+    word1: str
+    word2: str
+    type: Literal["nuance"]
+    status: Literal["pending", "processing", "completed", "failed"]
+    created_at: datetime = datetime.now()
+    updated_at: Optional[datetime] = None
+
+class JobModel(Document):
+    job_id: str
+    job: Union[ExplanationJobModel, NuanceJobModel] = Field(discriminator="type")

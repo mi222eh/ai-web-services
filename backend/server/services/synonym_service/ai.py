@@ -1,5 +1,5 @@
 import os
-import ollama
+import openai
 from pydantic import BaseModel
 import requests
 import logging
@@ -7,6 +7,8 @@ from duckduckgo_search import DDGS
 from server.models import ExplanationEntry
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import List, Dict, Any
+import httpx
+from ...config import settings
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -14,6 +16,12 @@ logger = logging.getLogger(__name__)
 
 # Number of worker threads
 MAX_WORKERS = 5
+
+# Configure OpenAI
+openai.base_url = settings.OPENAI_API_BASE  # Local server URL
+openai.api_key = "sk-no-key-needed"  # Dummy key for local models
+openai.api_type = "open_ai"  # For local models
+openai.base_url = settings.OPENAI_API_BASE  # New OpenAI client needs this
 
 
 class RankingEntry(BaseModel):
@@ -36,11 +44,14 @@ class SearchQueriesSchema(BaseModel):
     queries: list[str]
 
 
-OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "localhost")
-OLLAMA_MODEL = os.environ.get("OLLAMA_MODEL", "gemma2")
-logger.info(f"Connecting to Ollama at {OLLAMA_HOST} using model {OLLAMA_MODEL}")
-
-client = ollama.Client(host=OLLAMA_HOST)
+class SynonymNuance(BaseModel):
+    word1: str
+    word2: str
+    nuance_explanation: str
+    usage_examples: list[str]
+    context_differences: str
+    formality_level: str
+    emotional_weight: str
 
 
 def search_parallel(queries: List[str], max_results: int = 3) -> List[Dict[str, Any]]:
@@ -81,7 +92,7 @@ def generate_results_parallel(
     """
 
     def generate_one(i: int) -> CreateSynonymSchema:
-        logger.info(f"Generating result {i+1}/{num_results}...")
+        logger.info(f"Generating result {i + 1}/{num_results}...")
         return create_synonym_ai(synonym, search_info=search_info)
 
     results = []
@@ -95,9 +106,9 @@ def generate_results_parallel(
                 result = future.result()
                 if result:
                     results.append(result)
-                    logger.info(f"Generated result {index+1}")
+                    logger.info(f"Generated result {index + 1}")
             except Exception as e:
-                logger.error(f"Failed to generate result {index+1}: {e}")
+                logger.error(f"Failed to generate result {index + 1}: {e}")
 
     return results
 
@@ -137,13 +148,15 @@ def get_search_queries(synonym: str) -> list[str]:
     ]
 
     try:
-        response = client.chat(
-            OLLAMA_MODEL,
+        response = openai.beta.chat.completions.parse(
+            model=settings.OPENAI_MODEL,
             messages=messages,
-            format=SearchQueriesSchema.model_json_schema(),
-            options={"temperature": 0.7},  # Little randomness for variety
+            response_format=SearchQueriesSchema,
+            temperature=0.7,
         )
-        result = SearchQueriesSchema.model_validate_json(response.message.content)
+        result = SearchQueriesSchema.model_validate_json(
+            response.choices[0].message.content
+        )
         return result.queries
     except Exception as e:
         logger.error(f"Failed to get search queries from AI: {e}")
@@ -258,21 +271,18 @@ def create_synonym_ai(
             )
 
     try:
-        response = client.chat(
-            OLLAMA_MODEL,
+        response = openai.beta.chat.completions.parse(
+            model=settings.OPENAI_MODEL,
             messages=messages,
-            format=CreateSynonymSchema.model_json_schema(),
-            options={"temperature": 0},
+            response_format=CreateSynonymSchema,
+            temperature=0,
         )
         logger.info(f"Got response from AI model")
+        return CreateSynonymSchema.model_validate_json(
+            response.choices[0].message.content
+        )
     except Exception as e:
         logger.error(f"Failed to get response from AI model: {e}")
-        raise e
-
-    try:
-        return CreateSynonymSchema.model_validate_json(response.message.content)
-    except Exception as e:
-        logger.error(f"Failed to validate response schema: {e}")
         return None
 
 
@@ -286,67 +296,129 @@ def create_and_validate_synonym(synonym: str) -> CreateSynonymSchema:
     search_info = get_search_results(synonym)
 
     # Generate results in parallel
-    results = generate_results_parallel(synonym, search_info)
+    results = generate_results_parallel(synonym, search_info, 1)
+    return results[0]
 
-    if not results:
-        logger.error("Failed to generate any valid synonym results")
-        raise Exception("Failed to generate synonym results")
+    # if not results:
+    #     logger.error("Failed to generate any valid synonym results")
+    #     raise Exception("Failed to generate synonym results")
 
-    if len(results) == 1:
-        logger.info("Only one result generated, returning without ranking")
-        return results[0]
+    # if len(results) == 1:
+    #     logger.info("Only one result generated, returning without ranking")
+    #     return results[0]
 
-    # Create a ranking prompt for the AI
-    ranking_messages = [
+    # # Create a ranking prompt for the AI
+    # ranking_messages = [
+    #     {
+    #         "role": "system",
+    #         "content": """Du är en språkexpert som ska ranka olika synonymförklaringar. 
+    #         Bedöm varje förklaring baserat på följande kriterier:
+    #         1. Precision och korrekthet i synonymerna
+    #         2. Tydlighet och användbarhet i förklaringen
+    #         3. Omfattning och fullständighet
+            
+    #         VIKTIGT! Du MÅSTE svara i detta JSON-format:
+    #         {
+    #             "rankings": [
+    #                 {"index": "1", "rank": 1, "motivation": "Bäst för att..."},
+    #                 {"index": "2", "rank": 2, "motivation": "Näst bäst för att..."},
+    #                 ...
+    #             ]
+    #         }""",
+    #     },
+    #     {
+    #         "role": "user",
+    #         "content": f"Ranka följande förklaringar för ordet '{synonym}':\n"
+    #         + "\n".join(
+    #             [
+    #                 f"Alternativ {i + 1}:\nSynonymer: {r.synonyms}\nFörklaring: {r.explanation}"
+    #                 for i, r in enumerate(results)
+    #             ]
+    #         ),
+    #     },
+    # ]
+
+    # try:
+    #     ranking_response = openai.beta.chat.completions.parse(
+    #         model=settings.OPENAI_MODEL,
+    #         messages=ranking_messages,
+    #         response_format=RankingSchema,
+    #         temperature=0,
+    #     )
+
+    #     # Parse the ranking response and get the best result
+    #     rankings = RankingSchema.model_validate_json(
+    #         ranking_response.choices[0].message.content
+    #     )
+    #     best_index = min(rankings.rankings, key=lambda x: x.rank).index
+    #     best_result = results[int(best_index) - 1]
+
+    #     logger.info(
+    #         f"Successfully ranked results and selected best option (rank {best_index})"
+    #     )
+    #     return best_result
+
+    # except Exception as e:
+    #     logger.error(f"Failed during ranking process: {e}")
+    #     # Fallback to first result if ranking fails
+    #     logger.info("Falling back to first generated result")
+    #     return results[0]
+
+
+async def analyze_synonym_nuances(word1: str, word2: str) -> SynonymNuance:
+    """
+    Analyze the nuanced differences between two synonyms.
+    """
+    logger.info(f"Analyzing nuances between '{word1}' and '{word2}'")
+
+    messages = [
         {
             "role": "system",
-            "content": """Du är en språkexpert som ska ranka olika synonymförklaringar. 
-            Bedöm varje förklaring baserat på följande kriterier:
-            1. Precision och korrekthet i synonymerna
-            2. Tydlighet och användbarhet i förklaringen
-            3. Omfattning och fullständighet
-            
-            VIKTIGT! Du MÅSTE svara i detta JSON-format:
-            {
-                "rankings": [
-                    {"index": "1", "rank": 1, "motivation": "Bäst för att..."},
-                    {"index": "2", "rank": 2, "motivation": "Näst bäst för att..."},
-                    ...
-                ]
-            }""",
+            "content": f"""Du är en expert på svenska språket med djup förståelse för nyanser mellan ord.
+                Din uppgift är att analysera de subtila skillnaderna mellan två synonymer.
+                
+                Ditt svar MÅSTE vara på SVENSKA och i detta format:
+                {{
+                    "word1": "{word1}",
+                    "word2": "{word2}",
+                    "nuance_explanation": "En detaljerad förklaring av nyanserna mellan orden",
+                    "usage_examples": [
+                        "Exempel på när {word1} passar bättre",
+                        "Exempel på när {word2} passar bättre"
+                    ],
+                    "context_differences": "Förklaring av i vilka sammanhang respektive ord passar bäst",
+                    "formality_level": "word1_more_formal/word2_more_formal/equally_formal",
+                    "emotional_weight": "word1_stronger/word2_stronger/equally_strong"
+                }}
+                
+                VIKTIGT:
+                - Var MYCKET specifik om skillnaderna
+                - Ge konkreta exempel
+                - Förklara kontextuella skillnader
+                - För formality_level, använd ENDAST:
+                  * "word1_more_formal" om {word1} är mer formellt
+                  * "word2_more_formal" om {word2} är mer formellt
+                  * "equally_formal" om de är lika formella
+                - För emotional_weight, använd ENDAST:
+                  * "word1_stronger" om {word1} har starkare emotionell laddning
+                  * "word2_stronger" om {word2} har starkare emotionell laddning
+                  * "equally_strong" om de har lika stark emotionell laddning
+                - ANVÄND BARA DESSA EXAKTA VÄRDEN, INGA ANDRA VARIANTER TILLÅTS""",
         },
         {
             "role": "user",
-            "content": f"Ranka följande förklaringar för ordet '{synonym}':\n"
-            + "\n".join(
-                [
-                    f"Alternativ {i+1}:\nSynonymer: {r.synonyms}\nFörklaring: {r.explanation}"
-                    for i, r in enumerate(results)
-                ]
-            ),
+            "content": f"Analysera nyanserna mellan orden '{word1}' och '{word2}'.",
         },
     ]
 
     try:
-        ranking_response = client.chat(
-            OLLAMA_MODEL,
-            messages=ranking_messages,
-            format=RankingSchema.model_json_schema(),
-            options={"temperature": 0},
+        response = openai.beta.chat.completions.parse(
+            model=settings.OPENAI_MODEL,
+            messages=messages,
+            response_format=SynonymNuance,
+            temperature=0.7,
         )
-
-        # Parse the ranking response and get the best result
-        rankings = RankingSchema.model_validate_json(ranking_response.message.content)
-        best_index = min(rankings.rankings, key=lambda x: x.rank).index
-        best_result = results[int(best_index) - 1]
-
-        logger.info(
-            f"Successfully ranked results and selected best option (rank {best_index})"
-        )
-        return best_result
-
+        return SynonymNuance.model_validate_json(response.choices[0].message.content)
     except Exception as e:
-        logger.error(f"Failed during ranking process: {e}")
-        # Fallback to first result if ranking fails
-        logger.info("Falling back to first generated result")
-        return results[0]
+        logger.error(f"Failed to analyze nuances: {e}")
+        raise

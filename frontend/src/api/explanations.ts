@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { routerContext } from '@/lib/routerContext';
+import { getExplanationQueryOptions } from './queries';
 
 const API_URL = '/api/explanations';
 
@@ -17,7 +18,7 @@ export interface PaginatedResponse<T> {
 }
 
 // API functions
-const fetchExplanations = async (
+export const fetchExplanations = async (
   skip: number = 0,
   limit: number = 10,
   query?: string
@@ -57,6 +58,36 @@ const deleteExplanation = async (id: string): Promise<void> => {
   await axios.delete(`${API_URL}/${id}`);
 };
 
+export interface SynonymNuance {
+  word1: string;
+  word2: string;
+  nuance_explanation: string;
+  usage_examples: string[];
+  context_differences: string;
+  formality_level: "word1_more_formal" | "word2_more_formal" | "equally_formal";
+  emotional_weight: "word1_stronger" | "word2_stronger" | "equally_strong";
+}
+
+export interface NuanceRequest {
+  explanationId1: string;
+  explanationId2: string;
+}
+
+export const analyzeNuances = async (explanationId1: string, explanationId2: string): Promise<SynonymNuance> => {
+  // First get both explanations
+  const [explanation1, explanation2] = await Promise.all([
+    fetchExplanationById(explanationId1),
+    fetchExplanationById(explanationId2)
+  ]);
+
+  // Then send the words to analyze
+  const response = await axios.post<SynonymNuance>(`${API_URL}/nuances`, {
+    word1: explanation1.word,
+    word2: explanation2.word,
+  });
+  return response.data;
+};
+
 // React Query Hooks
 export const useExplanations = (skip: number, limit: number, query?: string) => {
   return useQuery({
@@ -67,11 +98,7 @@ export const useExplanations = (skip: number, limit: number, query?: string) => 
 };
 
 export const useExplanation = (id: string) => {
-  return useQuery({
-    queryKey: ['explanation', id],
-    queryFn: () => fetchExplanationById(id),
-    enabled: !!id && routerContext.auth.isAuthenticated,
-  });
+  return useQuery(getExplanationQueryOptions(id));
 };
 
 export const useCreateExplanation = () => {

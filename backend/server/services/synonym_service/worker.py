@@ -80,13 +80,11 @@ async def process_explanation(explanation_id: PydanticObjectId, is_retry: bool =
 
             # After successful processing, notify clients
             await ConnectionManager.send_message(
-                json.dumps(
-                    {
-                        "type": "explanation_ready",
-                        "id": str(explanation_id),
-                        "word": explanation.word,
-                    }
-                )
+                {
+                    "type": "explanation_ready",
+                    "id": str(explanation_id),
+                    "word": explanation.word,
+                }
             )
 
         except Exception as e:
@@ -97,13 +95,11 @@ async def process_explanation(explanation_id: PydanticObjectId, is_retry: bool =
         logger.error(f"Error processing explanation {explanation_id}: {e}")
         # Notify clients about the error
         await ConnectionManager.send_message(
-            json.dumps(
                 {
                     "type": "explanation_error",
                     "id": str(explanation_id),
                     "error": str(e),
                 }
-            )
         )
     finally:
         # Always remove from processing set when done

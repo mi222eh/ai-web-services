@@ -23,16 +23,19 @@ export function useWebSocket() {
     // Create WebSocket with credentials
     socketRef.current = new WebSocket(wsUrl);
 
-    socketRef.current.onmessage = (event) => {
+    socketRef.current.onmessage = async (event) => {
       console.log('WebSocket message received:', event.data);
       try {
         const data = JSON.parse(event.data);
         
         if (data.type === 'explanation_ready') {
           // Invalidate queries to refetch data
-          queryClient.invalidateQueries(getExplanationsQueryOptions());
-          queryClient.invalidateQueries(getExplanationQueryOptions(data.id));
-          router.invalidate();
+          await queryClient.refetchQueries(getExplanationsQueryOptions());
+          await queryClient.refetchQueries(getExplanationQueryOptions(data.id));
+          await queryClient.refetchQueries({
+            predicate: (query) => query.queryKey[0] === 'explanations',
+          });
+          await router.invalidate();
         } else if (data.type === 'explanation_error') {
           console.error('Explanation error:', data.error);
           toast.error('Error generating explanation');

@@ -15,8 +15,11 @@ import { Route as LoginImport } from './routes/login'
 import { Route as AboutImport } from './routes/about'
 import { Route as AuthImport } from './routes/_auth'
 import { Route as ExplanationsRouteImport } from './routes/explanations/route'
-import { Route as IndexImport } from './routes/index'
+import { Route as IndexImport } from './routes/ind./routes/explanations/route
 import { Route as ExplanationsExplanationIdRouteImport } from './routes/explanations/$explanationId/route'
+import { Route as ExplanationsWord1Word2Import } from './routes/explanations/$word1/$word2'
+import { Route as ExplanationsNuancesExplanationId1ExplanationId2RouteImport } from './routes/explanations/nuances/$explanationId1/$explanationId2/route'
+import { Route as ExplanationsNuancesExplanationId1ExplanationId2IndexImport } from './routes/explanations/nuances/$explanationId1/$explanationId2/index'
 
 // Create/Update Routes
 
@@ -54,6 +57,27 @@ const ExplanationsExplanationIdRouteRoute =
     id: '/$explanationId',
     path: '/$explanationId',
     getParentRoute: () => ExplanationsRouteRoute,
+  } as any)
+
+const ExplanationsWord1Word2Route = ExplanationsWord1Word2Import.update({
+  id: '/$word1/$word2',
+  path: '/$word1/$word2',
+  getParentRoute: () => ExplanationsRouteRoute,
+} as any)
+
+const ExplanationsNuancesExplanationId1ExplanationId2RouteRoute =
+  ExplanationsNuancesExplanationId1ExplanationId2RouteImport.update({
+    id: '/nuances/$explanationId1/$explanationId2',
+    path: '/nuances/$explanationId1/$explanationId2',
+    getParentRoute: () => ExplanationsRouteRoute,
+  } as any)
+
+const ExplanationsNuancesExplanationId1ExplanationId2IndexRoute =
+  ExplanationsNuancesExplanationId1ExplanationId2IndexImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () =>
+      ExplanationsNuancesExplanationId1ExplanationId2RouteRoute,
   } as any)
 
 // Populate the FileRoutesByPath interface
@@ -102,17 +126,58 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ExplanationsExplanationIdRouteImport
       parentRoute: typeof ExplanationsRouteImport
     }
+    '/explanations/$word1/$word2': {
+      id: '/explanations/$word1/$word2'
+      path: '/$word1/$word2'
+      fullPath: '/explanations/$word1/$word2'
+      preLoaderRoute: typeof ExplanationsWord1Word2Import
+      parentRoute: typeof ExplanationsRouteImport
+    }
+    '/explanations/nuances/$explanationId1/$explanationId2': {
+      id: '/explanations/nuances/$explanationId1/$explanationId2'
+      path: '/nuances/$explanationId1/$explanationId2'
+      fullPath: '/explanations/nuances/$explanationId1/$explanationId2'
+      preLoaderRoute: typeof ExplanationsNuancesExplanationId1ExplanationId2RouteImport
+      parentRoute: typeof ExplanationsRouteImport
+    }
+    '/explanations/nuances/$explanationId1/$explanationId2/': {
+      id: '/explanations/nuances/$explanationId1/$explanationId2/'
+      path: '/'
+      fullPath: '/explanations/nuances/$explanationId1/$explanationId2/'
+      preLoaderRoute: typeof ExplanationsNuancesExplanationId1ExplanationId2IndexImport
+      parentRoute: typeof ExplanationsNuancesExplanationId1ExplanationId2RouteImport
+    }
   }
 }
 
 // Create and export the route tree
 
+interface ExplanationsNuancesExplanationId1ExplanationId2RouteRouteChildren {
+  ExplanationsNuancesExplanationId1ExplanationId2IndexRoute: typeof ExplanationsNuancesExplanationId1ExplanationId2IndexRoute
+}
+
+const ExplanationsNuancesExplanationId1ExplanationId2RouteRouteChildren: ExplanationsNuancesExplanationId1ExplanationId2RouteRouteChildren =
+  {
+    ExplanationsNuancesExplanationId1ExplanationId2IndexRoute:
+      ExplanationsNuancesExplanationId1ExplanationId2IndexRoute,
+  }
+
+const ExplanationsNuancesExplanationId1ExplanationId2RouteRouteWithChildren =
+  ExplanationsNuancesExplanationId1ExplanationId2RouteRoute._addFileChildren(
+    ExplanationsNuancesExplanationId1ExplanationId2RouteRouteChildren,
+  )
+
 interface ExplanationsRouteRouteChildren {
   ExplanationsExplanationIdRouteRoute: typeof ExplanationsExplanationIdRouteRoute
+  ExplanationsWord1Word2Route: typeof ExplanationsWord1Word2Route
+  ExplanationsNuancesExplanationId1ExplanationId2RouteRoute: typeof ExplanationsNuancesExplanationId1ExplanationId2RouteRouteWithChildren
 }
 
 const ExplanationsRouteRouteChildren: ExplanationsRouteRouteChildren = {
   ExplanationsExplanationIdRouteRoute: ExplanationsExplanationIdRouteRoute,
+  ExplanationsWord1Word2Route: ExplanationsWord1Word2Route,
+  ExplanationsNuancesExplanationId1ExplanationId2RouteRoute:
+    ExplanationsNuancesExplanationId1ExplanationId2RouteRouteWithChildren,
 }
 
 const ExplanationsRouteRouteWithChildren =
@@ -125,6 +190,9 @@ export interface FileRoutesByFullPath {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/explanations/$explanationId': typeof ExplanationsExplanationIdRouteRoute
+  '/explanations/$word1/$word2': typeof ExplanationsWord1Word2Route
+  '/explanations/nuances/$explanationId1/$explanationId2': typeof ExplanationsNuancesExplanationId1ExplanationId2RouteRouteWithChildren
+  '/explanations/nuances/$explanationId1/$explanationId2/': typeof ExplanationsNuancesExplanationId1ExplanationId2IndexRoute
 }
 
 export interface FileRoutesByTo {
@@ -134,6 +202,8 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/explanations/$explanationId': typeof ExplanationsExplanationIdRouteRoute
+  '/explanations/$word1/$word2': typeof ExplanationsWord1Word2Route
+  '/explanations/nuances/$explanationId1/$explanationId2': typeof ExplanationsNuancesExplanationId1ExplanationId2IndexRoute
 }
 
 export interface FileRoutesById {
@@ -144,6 +214,9 @@ export interface FileRoutesById {
   '/about': typeof AboutRoute
   '/login': typeof LoginRoute
   '/explanations/$explanationId': typeof ExplanationsExplanationIdRouteRoute
+  '/explanations/$word1/$word2': typeof ExplanationsWord1Word2Route
+  '/explanations/nuances/$explanationId1/$explanationId2': typeof ExplanationsNuancesExplanationId1ExplanationId2RouteRouteWithChildren
+  '/explanations/nuances/$explanationId1/$explanationId2/': typeof ExplanationsNuancesExplanationId1ExplanationId2IndexRoute
 }
 
 export interface FileRouteTypes {
@@ -155,6 +228,9 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/explanations/$explanationId'
+    | '/explanations/$word1/$word2'
+    | '/explanations/nuances/$explanationId1/$explanationId2'
+    | '/explanations/nuances/$explanationId1/$explanationId2/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -163,6 +239,8 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/explanations/$explanationId'
+    | '/explanations/$word1/$word2'
+    | '/explanations/nuances/$explanationId1/$explanationId2'
   id:
     | '__root__'
     | '/'
@@ -171,6 +249,9 @@ export interface FileRouteTypes {
     | '/about'
     | '/login'
     | '/explanations/$explanationId'
+    | '/explanations/$word1/$word2'
+    | '/explanations/nuances/$explanationId1/$explanationId2'
+    | '/explanations/nuances/$explanationId1/$explanationId2/'
   fileRoutesById: FileRoutesById
 }
 
@@ -213,7 +294,9 @@ export const routeTree = rootRoute
     "/explanations": {
       "filePath": "explanations/route.tsx",
       "children": [
-        "/explanations/$explanationId"
+        "/explanations/$explanationId",
+        "/explanations/$word1/$word2",
+        "/explanations/nuances/$explanationId1/$explanationId2"
       ]
     },
     "/_auth": {
@@ -228,6 +311,21 @@ export const routeTree = rootRoute
     "/explanations/$explanationId": {
       "filePath": "explanations/$explanationId/route.tsx",
       "parent": "/explanations"
+    },
+    "/explanations/$word1/$word2": {
+      "filePath": "explanations/$word1/$word2.tsx",
+      "parent": "/explanations"
+    },
+    "/explanations/nuances/$explanationId1/$explanationId2": {
+      "filePath": "explanations/nuances/$explanationId1/$explanationId2/route.tsx",
+      "parent": "/explanations",
+      "children": [
+        "/explanations/nuances/$explanationId1/$explanationId2/"
+      ]
+    },
+    "/explanations/nuances/$explanationId1/$explanationId2/": {
+      "filePath": "explanations/nuances/$explanationId1/$explanationId2/index.tsx",
+      "parent": "/explanations/nuances/$explanationId1/$explanationId2"
     }
   }
 }
