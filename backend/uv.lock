@@ -34,7 +34,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "httpx" },
     { name = "motor" },
-    { name = "ollama" },
     { name = "openai" },
     { name = "pydantic" },
     { name = "pydantic-settings" },
@@ -51,7 +50,6 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.6" },
     { name = "httpx", specifier = ">=0.27.2" },
     { name = "motor", specifier = ">=3.6.0" },
-    { name = "ollama", specifier = ">=0.4.4" },
     { name = "openai", specifier = ">=1.58.1" },
     { name = "pydantic", specifier = ">=2.10.4" },
     { name = "pydantic-settings", specifier = ">=2.7.1" },
@@ -446,19 +444,6 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/6a/d1/06af0527fd02d49b203db70dba462e47275a3c1094f830fdaf090f0cb20c/motor-3.6.0.tar.gz", hash = "sha256:0ef7f520213e852bf0eac306adf631aabe849227d8aec900a2612512fb9c5b8d", size = 278447 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/b4/c2/bba4dce0dc56e49d95c270c79c9330ed19e6b71a2a633aecf53e7e1f04c9/motor-3.6.0-py3-none-any.whl", hash = "sha256:9f07ed96f1754963d4386944e1b52d403a5350c687edc60da487d66f98dbf894", size = 74802 },
-]
-
-[[package]]
-name = "ollama"
-version = "0.4.4"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "httpx" },
-    { name = "pydantic" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/d8/55/af1d77457cbd4b0de93a6a0c4367de327c057ecfdd4efd19a428516b56d4/ollama-0.4.4.tar.gz", hash = "sha256:e1db064273c739babc2dde9ea84029c4a43415354741b6c50939ddd3dd0f7ffb", size = 13065 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/d3/01/815774a30d0047d464add27e2824a5b1d02ea4ad021c83590cd753e5f511/ollama-0.4.4-py3-none-any.whl", hash = "sha256:0f466e845e2205a1cbf5a2fef4640027b90beaa3b06c574426d8b6b17fd6e139", size = 13155 },
 ]
 
 [[package]]
