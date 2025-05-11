@@ -15,7 +15,7 @@ import { Route as LoginImport } from './routes/login'
 import { Route as AboutImport } from './routes/about'
 import { Route as AuthImport } from './routes/_auth'
 import { Route as ExplanationsRouteImport } from './routes/explanations/route'
-import { Route as IndexImport } from './routes/ind./routes/explanations/route
+import { Route as IndexImport } from './routes/ind./routes/explanations/route'
 import { Route as ExplanationsExplanationIdRouteImport } from './routes/explanations/$explanationId/route'
 import { Route as ExplanationsWord1Word2Import } from './routes/explanations/$word1/$word2'
 import { Route as ExplanationsNuancesExplanationId1ExplanationId2RouteImport } from './routes/explanations/nuances/$explanationId1/$explanationId2/route'
@@ -157,10 +157,10 @@ interface ExplanationsNuancesExplanationId1ExplanationId2RouteRouteChildren {
 }
 
 const ExplanationsNuancesExplanationId1ExplanationId2RouteRouteChildren: ExplanationsNuancesExplanationId1ExplanationId2RouteRouteChildren =
-  {
-    ExplanationsNuancesExplanationId1ExplanationId2IndexRoute:
-      ExplanationsNuancesExplanationId1ExplanationId2IndexRoute,
-  }
+{
+  ExplanationsNuancesExplanationId1ExplanationId2IndexRoute:
+    ExplanationsNuancesExplanationId1ExplanationId2IndexRoute,
+}
 
 const ExplanationsNuancesExplanationId1ExplanationId2RouteRouteWithChildren =
   ExplanationsNuancesExplanationId1ExplanationId2RouteRoute._addFileChildren(
@@ -222,36 +222,36 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/explanations'
-    | ''
-    | '/about'
-    | '/login'
-    | '/explanations/$explanationId'
-    | '/explanations/$word1/$word2'
-    | '/explanations/nuances/$explanationId1/$explanationId2'
-    | '/explanations/nuances/$explanationId1/$explanationId2/'
+  | '/'
+  | '/explanations'
+  | ''
+  | '/about'
+  | '/login'
+  | '/explanations/$explanationId'
+  | '/explanations/$word1/$word2'
+  | '/explanations/nuances/$explanationId1/$explanationId2'
+  | '/explanations/nuances/$explanationId1/$explanationId2/'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/explanations'
-    | ''
-    | '/about'
-    | '/login'
-    | '/explanations/$explanationId'
-    | '/explanations/$word1/$word2'
-    | '/explanations/nuances/$explanationId1/$explanationId2'
+  | '/'
+  | '/explanations'
+  | ''
+  | '/about'
+  | '/login'
+  | '/explanations/$explanationId'
+  | '/explanations/$word1/$word2'
+  | '/explanations/nuances/$explanationId1/$explanationId2'
   id:
-    | '__root__'
-    | '/'
-    | '/explanations'
-    | '/_auth'
-    | '/about'
-    | '/login'
-    | '/explanations/$explanationId'
-    | '/explanations/$word1/$word2'
-    | '/explanations/nuances/$explanationId1/$explanationId2'
-    | '/explanations/nuances/$explanationId1/$explanationId2/'
+  | '__root__'
+  | '/'
+  | '/explanations'
+  | '/_auth'
+  | '/about'
+  | '/login'
+  | '/explanations/$explanationId'
+  | '/explanations/$word1/$word2'
+  | '/explanations/nuances/$explanationId1/$explanationId2'
+  | '/explanations/nuances/$explanationId1/$explanationId2/'
   fileRoutesById: FileRoutesById
 }
 
